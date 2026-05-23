@@ -2,7 +2,7 @@
 # Template: set-git-cred.sh
 # Usage: Edit the 'project' variable for your repo before running.
 
-project=Svidetelstva
+project=Svidetelstva-2026
 
 # Display project info
 echo "-----------------------------------------------------------------------------"
