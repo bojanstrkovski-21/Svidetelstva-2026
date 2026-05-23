@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="mk">
+<head>
+    <meta charset="UTF-8">
+    <title>Печатење — {{ cert.student_name }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; background: #eee; }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            background: white;
+            margin: 10mm auto;
+            padding: 15mm 18mm;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .page-bg {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-size: 100% 100%;
+            background-repeat: no-repeat;
+            background-position: top left;
+            opacity: 0.35;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .page-content {
+            position: relative;
+            z-index: 1;
+        }
+        .page-1-bg { background-image: url('/static/img/svidtelstvo-1.png'); }
+        .page-2-bg { background-image: url('/static/img/svidtelstvo-2.png'); }
+
+        @media print {
+            .page-bg { display: none; }
+        }
+
+        .no-print { background: #333; color: white; padding: 10px 20px; text-align: center; }
+        .no-print button { margin: 0 8px; padding: 6px 16px; cursor: pointer; border: none; border-radius: 4px; }
+        .btn-print { background: #2563eb; color: white; }
+        .btn-close { background: #6b7280; color: white; }
+
+        .field { display: inline-block; border-bottom: 1px solid #000; min-width: 30mm; }
+        .field-wide { min-width: 80mm; }
+        .field-xl { min-width: 120mm; }
+
+        .subjects-table { width: 100%; border-collapse: collapse; margin-top: 2mm; }
+        .subjects-table td { padding: 0.5mm 1mm; vertical-align: bottom; }
+        .subjects-table .td-name { width: 55%; border-bottom: 1px solid #000; }
+        .subjects-table .td-grade-text { width: 30%; border-bottom: 1px solid #000; }
+        .subjects-table .td-grade-num { width: 10%; border-bottom: 1px solid #000; text-align: right; }
+
+        .line { line-height: 2; }
+
+        @media print {
+            .no-print { display: none; }
+            body { background: white; }
+            .page { margin: 0; box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="no-print">
+    <button class="btn-print" onclick="window.print()">Печати</button>
+    <button class="btn-close" onclick="window.close()">Затвори</button>
+    <span style="margin-left:16px; font-size:13px; opacity:0.8;">Само текстот се испраќа на печатарот — позадината не се печати.</span>
+</div>
+
+<!-- PAGE 1 -->
+<div class="page">
+    <div class="page-bg page-1-bg"></div>
+    <div class="page-content">
+    <div style="text-align:center; margin-bottom: 6mm;">
+        <div class="field field-xl" style="min-width:140mm;">{{ settings.school_name or '' }}</div>
+        <div style="font-size:9pt; color:#666;">(назив на средното училиште)</div>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; margin-bottom:4mm;">
+        <div>
+            <span class="field" style="min-width:60mm;">{{ settings.municipality or '' }}</span>
+            <div style="font-size:9pt; color:#666;">(општина/Град Скопје)</div>
+        </div>
+        <div>
+            Главна книга бр. <span class="field" style="min-width:30mm;">{{ cert.main_book_number or '' }}</span>
+            /20<span class="field" style="min-width:10mm;"></span> година
+        </div>
+    </div>
+
+    <div style="text-align:center; margin: 6mm 0 2mm;">
+        <strong style="font-size:14pt;">СВИДЕТЕЛСТВО</strong>
+    </div>
+    <div style="text-align:center; margin-bottom:6mm;">
+        за завршена <span class="field" style="min-width:80mm;">{{ cert.class_year or '' }}</span> година
+        <div style="font-size:9pt; color:#666;">(со римски број и со букви)</div>
+    </div>
+
+    <div style="margin-bottom:2mm;">
+        <span class="field field-xl" style="min-width:150mm;">{{ cert.student_name or '' }}</span>
+        <div style="font-size:9pt; color:#666;">(ime и презиме на ученикот/ученичката)</div>
+    </div>
+
+    <div class="line">
+        sin/ќерка на <span class="field" style="min-width:60mm;">{{ cert.parent_name or '' }}</span>
+        <span style="font-size:9pt; color:#666;">(ime на родителот/старателот)</span>
+        роден/а на <span class="field" style="min-width:30mm;">{{ cert.birth_date or '' }}</span> година
+    </div>
+    <div class="line">
+        во <span class="field" style="min-width:60mm;">{{ cert.birth_place or '' }}</span>
+        општина <span class="field" style="min-width:50mm;">{{ cert.birth_municipality or '' }}</span>
+    </div>
+    <div class="line">
+        држава <span class="field" style="min-width:80mm;">{{ cert.birth_country or '' }}</span>
+        државјанство <span class="field" style="min-width:40mm;">{{ cert.citizenship or '' }}</span>
+    </div>
+    <div class="line">
+        во учебната 20<span class="field" style="min-width:8mm;"></span>/20<span class="field" style="min-width:8mm;"></span>
+        година по <span class="field" style="min-width:20mm;">{{ cert.attempt_number or '' }}</span>
+        <span style="font-size:9pt; color:#666;">(со букви)</span>
+        пат учеше во <span class="field" style="min-width:30mm;">{{ cert.class_year or '' }}</span>
+        <span style="font-size:9pt; color:#666;">(со римски број и со букви)</span>
+    </div>
+    <div class="line">година на средното училиште и го постигна следниот успех:</div>
+
+    <div style="display:flex; justify-content:space-between; margin-top:4mm; margin-bottom:1mm;">
+        <strong>Наставни предмети/модули</strong>
+        <strong>Успех</strong>
+    </div>
+
+    {% set page1_subjects = cert.subjects_grades[:20] %}
+    <table class="subjects-table">
+        {% for sg in page1_subjects %}
+        <tr>
+            <td class="td-name">{{ sg.name }}</td>
+            <td class="td-grade-text">{{ sg.grade_text }}</td>
+            <td class="td-grade-num">{{ sg.grade_num }}</td>
+        </tr>
+        {% endfor %}
+        {% for i in range(20 - page1_subjects|length) %}
+        <tr><td class="td-name">&nbsp;</td><td class="td-grade-text"></td><td class="td-grade-num"></td></tr>
+        {% endfor %}
+    </table>
+    </div><!-- end page-content -->
+</div>
+
+<!-- PAGE 2 -->
+<div class="page">
+    <div class="page-bg page-2-bg"></div>
+    <div class="page-content">
+    <div style="display:flex; justify-content:space-between; margin-bottom:1mm;">
+        <strong>Наставни предмети/модули</strong>
+        <strong>Успех</strong>
+    </div>
+
+    {% set page2_subjects = cert.subjects_grades[20:] %}
+    <table class="subjects-table">
+        {% for sg in page2_subjects %}
+        <tr>
+            <td class="td-name">{{ sg.name }}</td>
+            <td class="td-grade-text">{{ sg.grade_text }}</td>
+            <td class="td-grade-num">{{ sg.grade_num }}</td>
+        </tr>
+        {% endfor %}
+        {% for i in range(4 - page2_subjects|length) %}
+        <tr><td class="td-name">&nbsp;</td><td class="td-grade-text"></td><td class="td-grade-num"></td></tr>
+        {% endfor %}
+    </table>
+
+    <div style="margin-top:6mm;" class="line">
+        Поведение <span class="field" style="min-width:80mm;">{{ cert.behavior or '' }}</span>
+    </div>
+    <div class="line">
+        Изостаноци: оправдани <span class="field" style="min-width:30mm;">{{ cert.absences_justified or '' }}</span>
+        неоправдани <span class="field" style="min-width:30mm;">{{ cert.absences_unjustified or '' }}</span>
+    </div>
+
+    <div style="margin-top:8mm;" class="line">
+        Според постигнатиот успех ученикот/ученичката заврши
+        <span class="field" style="min-width:70mm;">{{ cert.completed_year or '' }}</span> година
+        <div style="font-size:9pt; color:#666;">(со римски број и со букви)</div>
+    </div>
+
+    <div class="line" style="margin-top:2mm;">
+        <span class="field" style="min-width:60mm;">{{ cert.education_type or '' }}</span>
+        <span style="font-size:9pt; color:#666;">(гимназиско/стручно/уметничко)</span>,
+        <span class="field" style="min-width:80mm;">{{ cert.area or '' }}</span>
+        <span style="font-size:9pt; color:#666;">(подрачје/струка/сектор/насока)</span>,
+    </div>
+    <div class="line">
+        <span class="field" style="min-width:90mm;">{{ cert.profile or '' }}</span>
+        <span style="font-size:9pt; color:#666;">(образовен профил/квалификација)</span>
+        со општ успех <span class="field" style="min-width:40mm;">{{ cert.overall_grade or '' }}</span>
+    </div>
+
+    <div style="margin-top:6mm;" class="line">
+        Во <span class="field" style="min-width:40mm;">{{ cert.place or '' }}</span>
+        <span style="font-size:9pt; color:#666;">(место)</span>
+        <span class="field" style="min-width:30mm;">{{ cert.cert_date or '' }}</span>
+        <span style="font-size:9pt; color:#666;">(датум)</span>
+        20<span class="field" style="min-width:8mm;"></span> година.
+        &nbsp;&nbsp;&nbsp; Дел. бр. <span class="field" style="min-width:35mm;">{{ cert.del_br or '' }}</span>
+    </div>
+
+    <div style="margin-top:16mm; display:flex; justify-content:space-between;">
+        <div style="text-align:center;">
+            <div>Раководител на паралелката</div>
+            <div style="margin-top:8mm; border-top:1px solid #000; width:60mm; margin-left:auto; margin-right:auto;"></div>
+        </div>
+        <div style="text-align:center; margin-top:6mm;">М. П.</div>
+        <div style="text-align:center;">
+            <div>Директор</div>
+            <div style="margin-top:8mm; border-top:1px solid #000; width:50mm; margin-left:auto; margin-right:auto;"></div>
+        </div>
+    </div>
+
+    <div style="margin-top:40mm;" class="line">
+        Училиштето е верифицирано со акт број
+        <span class="field" style="min-width:60mm;">{{ cert.verification_act or '' }}</span>
+        од <span class="field" style="min-width:30mm;">{{ cert.verification_date or '' }}</span>
+        <span style="font-size:9pt; color:#666;">(датум)</span> година,
+    </div>
+    <div class="line">
+        издаден од <span class="field" style="min-width:120mm;">{{ cert.verification_issued_by or '' }}</span>
+    </div>
+    </div><!-- end page-content -->
+</div>
+
+</body>
+</html>

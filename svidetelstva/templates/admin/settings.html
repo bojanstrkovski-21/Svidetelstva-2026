@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Поставки{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">Поставки</h1>
+<form method="POST" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 max-w-lg space-y-4">
+    <div>
+        <label class="block text-sm font-medium mb-1">Назив на средното училиште</label>
+        <input type="text" name="school_name" value="{{ settings.get('school_name', '') }}"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
+    </div>
+    <div>
+        <label class="block text-sm font-medium mb-1">Општина/Град</label>
+        <input type="text" name="municipality" value="{{ settings.get('municipality', '') }}"
+            list="mkCitiesList"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
+        <datalist id="mkCitiesList">
+            {% for city in mk_cities %}
+            <option value="{{ city }}">
+            {% endfor %}
+        </datalist>
+    </div>
+    <hr class="border-gray-200 dark:border-gray-600">
+    <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Верификација на училиштето</h2>
+    <div>
+        <label class="block text-sm font-medium mb-1">Акт број</label>
+        <input type="text" name="verification_act" value="{{ settings.get('verification_act', '') }}"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
+    </div>
+    <div>
+        <label class="block text-sm font-medium mb-1">Датум на акт</label>
+        <input type="text" name="verification_date" value="{{ settings.get('verification_date', '') }}"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
+    </div>
+    <div>
+        <label class="block text-sm font-medium mb-1">Издаден од</label>
+        <input type="text" name="verification_issued_by" value="{{ settings.get('verification_issued_by', '') }}"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
+    </div>
+    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium">Зачувај</button>
+</form>
+{% endblock %}

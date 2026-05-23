@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}Администрација{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">Администрација</h1>
+<div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-5 shadow-sm text-center">
+        <div class="text-3xl font-bold text-blue-600">{{ stats.students }}</div>
+        <div class="text-sm text-gray-500 mt-1">Ученици</div>
+        <a href="{{ url_for('admin_students') }}" class="text-xs text-blue-500 hover:underline mt-2 block">Управувај →</a>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-5 shadow-sm text-center">
+        <div class="text-3xl font-bold text-gray-700 dark:text-gray-200">{{ stats.certificates }}</div>
+        <div class="text-sm text-gray-500 mt-1">Сведителства</div>
+        <a href="{{ url_for('certificates_list') }}" class="text-xs text-blue-500 hover:underline mt-2 block">Прегледај →</a>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-5 shadow-sm text-center">
+        <div class="text-3xl font-bold text-green-600">{{ stats.ready }}</div>
+        <div class="text-sm text-gray-500 mt-1">Готови за печатење</div>
+        <a href="{{ url_for('certificates_list') }}?status=ready" class="text-xs text-blue-500 hover:underline mt-2 block">Прегледај →</a>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-5 shadow-sm text-center">
+        <div class="text-3xl font-bold text-yellow-500">{{ stats.draft }}</div>
+        <div class="text-sm text-gray-500 mt-1">Нацрти</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-5 shadow-sm text-center">
+        <div class="text-3xl font-bold">{{ stats.users }}</div>
+        <div class="text-sm text-gray-500 mt-1">Корисници</div>
+        <a href="{{ url_for('admin_users') }}" class="text-xs text-blue-500 hover:underline mt-2 block">Управувај →</a>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-5 shadow-sm text-center">
+        <div class="text-3xl font-bold">{{ stats.classes }}</div>
+        <div class="text-sm text-gray-500 mt-1">Паралелки</div>
+        <a href="{{ url_for('admin_classes') }}" class="text-xs text-blue-500 hover:underline mt-2 block">Управувај →</a>
+    </div>
+</div>
+
+<div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+    <a href="{{ url_for('admin_students') }}" class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm hover:shadow-md transition text-center font-medium">Ученици</a>
+    <a href="{{ url_for('admin_subjects') }}" class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm hover:shadow-md transition text-center font-medium">Предмети</a>
+    <a href="{{ url_for('admin_classes') }}" class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm hover:shadow-md transition text-center font-medium">Паралелки</a>
+    <a href="{{ url_for('admin_users') }}" class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm hover:shadow-md transition text-center font-medium">Корисници</a>
+    <a href="{{ url_for('admin_settings') }}" class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm hover:shadow-md transition text-center font-medium">Поставки</a>
+</div>
+{% endblock %}

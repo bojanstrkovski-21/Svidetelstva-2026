@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block title %}Сведителства{% endblock %}
+{% block content %}
+
+<div class="mb-6 flex items-center justify-between">
+    <h1 class="text-2xl font-bold">Сведителства</h1>
+    <a href="{{ url_for('certificate_new') }}"
+        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition">
+        + Ново
+    </a>
+</div>
+
+<form method="GET" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-4 flex flex-wrap gap-3 items-end">
+    <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Паралелка</label>
+        <select name="class_id" class="px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+            <option value="">Сите</option>
+            {% for c in classes %}
+            <option value="{{ c.id }}" {% if class_filter == c.id|string %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Статус</label>
+        <select name="status" class="px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+            <option value="all" {% if status_filter == 'all' %}selected{% endif %}>Сите</option>
+            <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>Нацрти</option>
+            <option value="ready" {% if status_filter == 'ready' %}selected{% endif %}>Готови</option>
+        </select>
+    </div>
+    <button type="submit" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm">Филтрирај</button>
+</form>
+
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+    {% if certificates %}
+    <table class="w-full text-sm">
+        <thead class="border-b border-gray-200 dark:border-gray-700">
+            <tr class="text-left text-gray-500 dark:text-gray-400">
+                <th class="px-4 py-3 font-medium">Ученик</th>
+                <th class="px-4 py-3 font-medium">Паралелка</th>
+                <th class="px-4 py-3 font-medium">Уч. год.</th>
+                <th class="px-4 py-3 font-medium">Статус</th>
+                <th class="px-4 py-3 font-medium">Изменето</th>
+                <th class="px-4 py-3"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            {% for cert in certificates %}
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-750">
+                <td class="px-4 py-3 font-medium">{{ cert.student_name or '—' }}</td>
+                <td class="px-4 py-3 text-gray-600 dark:text-gray-400">{{ cert.class_name or '—' }}</td>
+                <td class="px-4 py-3 text-gray-600 dark:text-gray-400">{{ cert.school_year or '—' }}</td>
+                <td class="px-4 py-3">
+                    <span class="px-2 py-0.5 rounded-full text-xs
+                        {% if cert.status == 'ready' %}bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300
+                        {% else %}bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300{% endif %}">
+                        {{ 'Готово' if cert.status == 'ready' else 'Нацрт' }}
+                    </span>
+                </td>
+                <td class="px-4 py-3 text-gray-400 text-xs">{{ cert.updated_at[:10] if cert.updated_at else '' }}</td>
+                <td class="px-4 py-3 text-right space-x-3">
+                    <a href="{{ url_for('certificate_edit', cert_id=cert.id) }}" class="text-blue-600 dark:text-blue-400 hover:underline">Уреди</a>
+                    <a href="{{ url_for('certificate_print', cert_id=cert.id) }}" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" target="_blank">Печати</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="px-6 py-10 text-center text-gray-400">Нема пронајдени сведителства.</div>
+    {% endif %}
+</div>
+
+{% endblock %}

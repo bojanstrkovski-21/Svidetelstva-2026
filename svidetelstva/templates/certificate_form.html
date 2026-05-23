@@ -1,0 +1,490 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Уреди' if cert else 'Ново' }} сведителство{% endblock %}
+{% block content %}
+
+<div class="mb-6 flex items-center justify-between">
+    <h1 class="text-2xl font-bold">{{ 'Уреди сведителство' if cert else 'Ново сведителство' }}</h1>
+    {% if cert %}
+    <div class="flex gap-2">
+        <a href="{{ url_for('certificate_print', cert_id=cert.id) }}" target="_blank"
+            class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm">Преглед за печатење</a>
+    </div>
+    {% endif %}
+</div>
+
+<form method="POST" id="certForm">
+
+  <!-- Student selection -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-4">
+    <h2 class="font-semibold mb-4 text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 pb-2">Ученик</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Паралелка</label>
+        <select name="class_id" id="classSelect" onchange="loadStudents(this.value)"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+          <option value="">— Одбери паралелка —</option>
+          {% for c in classes %}
+          <option value="{{ c.id }}" {% if cert and cert.class_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Ученик</label>
+        <select name="student_id" id="studentSelect" onchange="fillStudent(this.value)"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+          <option value="">— Одбери ученик —</option>
+          {% if cert and cert.student_id %}
+          <option value="{{ cert.student_id }}" selected>{{ cert.student_name }}</option>
+          {% endif %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Ime и презиме</label>
+        <input type="text" name="student_name" id="studentName" value="{{ cert.student_name if cert else '' }}"
+            readonly
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-600 text-sm cursor-default">
+        <p class="text-xs text-gray-400 mt-0.5">Авто-пополнето</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+      <div class="md:col-span-2">
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Име на родителот/старателот</label>
+        <input type="text" name="parent_name" id="parentName" value="{{ cert.parent_name if cert else '' }}"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Роден/а на (година)</label>
+        <input type="text" name="birth_date" id="birthDate" value="{{ cert.birth_date if cert else '' }}"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Општина на раѓање</label>
+        <input type="text" name="birth_municipality" id="birthMunicipality" value="{{ cert.birth_municipality if cert else '' }}"
+            list="mkCitiesList"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+        <datalist id="mkCitiesList">
+          {% for city in mk_cities %}
+          <option value="{{ city }}">
+          {% endfor %}
+        </datalist>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Држава на раѓање</label>
+        <select name="birth_country" id="birthCountry" onchange="toggleBirthPlace()"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+          {% for country in countries %}
+          <option value="{{ country.name }}" {% if cert and cert.birth_country == country.name %}selected
+              {% elif not cert and country.name == 'Република Северна Македонија' %}selected{% endif %}>
+            {{ country.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div id="birthPlaceWrap">
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Место на раѓање</label>
+        <input type="text" name="birth_place" id="birthPlace" value="{{ cert.birth_place if cert else '' }}"
+            list="mkCitiesList"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Државјанство</label>
+        <input type="text" name="citizenship" id="citizenship" value="{{ cert.citizenship if cert else 'македонско' }}"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+      </div>
+    </div>
+  </div>
+
+  <!-- School year info -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-4">
+    <h2 class="font-semibold mb-4 text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 pb-2">Учебна година</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Учебна година (20__/20__)</label>
+        <input type="text" name="school_year" value="{{ cert.school_year if cert else '' }}" placeholder="2025/2026"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">По __ пат учеше (со букви)</label>
+        <input type="text" name="attempt_number" value="{{ cert.attempt_number if cert else '' }}" placeholder="прв"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Во __ година (римски + букви)</label>
+        <select name="class_year"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+          <option value="">— Одбери —</option>
+          <option value="I (прва)" {% if cert and cert.class_year == 'I (прва)' %}selected{% endif %}>I (прва)</option>
+          <option value="II (втора)" {% if cert and cert.class_year == 'II (втора)' %}selected{% endif %}>II (втора)</option>
+          <option value="III (трета)" {% if cert and cert.class_year == 'III (трета)' %}selected{% endif %}>III (трета)</option>
+          <option value="IV (четврта)" {% if cert and cert.class_year == 'IV (четврта)' %}selected{% endif %}>IV (четврта)</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Главна книга бр.</label>
+        <input type="text" name="main_book_number" value="{{ cert.main_book_number if cert else '' }}"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+      </div>
+    </div>
+  </div>
+
+  <!-- Subjects -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-4">
+    <div class="flex items-center justify-between mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
+        <h2 class="font-semibold text-gray-700 dark:text-gray-300">Наставни предмети/модули</h2>
+        <button type="button" onclick="addSubjectRow()"
+            class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm">+ Додај предмет</button>
+    </div>
+
+    <div class="grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 px-1">
+        <div class="col-span-6">Наставен предмет/модул</div>
+        <div class="col-span-4">Успех (со букви)</div>
+        <div class="col-span-1 text-center">Оц.</div>
+        <div class="col-span-1"></div>
+    </div>
+
+    <div id="subjectsContainer" class="space-y-2">
+      {% if cert and cert.subjects_grades %}
+        {% for sg in cert.subjects_grades %}{% set i = loop.index0 %}
+        <div class="grid grid-cols-12 gap-2 items-center subject-row">
+          <div class="col-span-6">
+            <input type="text" name="subject_{{ i }}" value="{{ sg.name }}" list="subjectsList"
+                class="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+          </div>
+          <div class="col-span-4">
+            <select name="grade_text_{{ i }}" onchange="fillGradeNum(this)"
+                class="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+              <option value="">— —</option>
+              <option value="Одличен" {% if sg.grade_text == 'Одличен' %}selected{% endif %}>Одличен</option>
+              <option value="Мн.Добар" {% if sg.grade_text == 'Мн.Добар' %}selected{% endif %}>Мн.Добар</option>
+              <option value="Добар" {% if sg.grade_text == 'Добар' %}selected{% endif %}>Добар</option>
+              <option value="Доволен" {% if sg.grade_text == 'Доволен' %}selected{% endif %}>Доволен</option>
+              <option value="Недоволен" {% if sg.grade_text == 'Недоволен' %}selected{% endif %}>Недоволен</option>
+            </select>
+          </div>
+          <div class="col-span-1">
+            <input type="text" name="grade_num_{{ i }}" value="{{ sg.grade_num }}" maxlength="1"
+                class="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-center">
+          </div>
+          <div class="col-span-1 text-center">
+            <button type="button" onclick="removeRow(this)" class="text-red-400 hover:text-red-600 text-lg leading-none">×</button>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        {% for i in range(15) %}
+        <div class="grid grid-cols-12 gap-2 items-center subject-row">
+          <div class="col-span-6">
+            <input type="text" name="subject_{{ i }}" list="subjectsList"
+                class="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+          </div>
+          <div class="col-span-4">
+            <select name="grade_text_{{ i }}" onchange="fillGradeNum(this)"
+                class="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+              <option value="">— —</option>
+              <option value="Одличен">Одличен</option>
+              <option value="Мн.Добар">Мн.Добар</option>
+              <option value="Добар">Добар</option>
+              <option value="Доволен">Доволен</option>
+              <option value="Недоволен">Недоволен</option>
+            </select>
+          </div>
+          <div class="col-span-1">
+            <input type="text" name="grade_num_{{ i }}" maxlength="1"
+                class="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-center">
+          </div>
+          <div class="col-span-1 text-center">
+            <button type="button" onclick="removeRow(this)" class="text-red-400 hover:text-red-600 text-lg leading-none">×</button>
+          </div>
+        </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+
+    <datalist id="subjectsList">
+      {% for s in subjects %}
+      <option value="{{ s.name }}">
+      {% endfor %}
+    </datalist>
+  </div>
+
+  <!-- Side 2 fields -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-4">
+    <h2 class="font-semibold mb-4 text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 pb-2">Страна 2</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Поведение</label>
+        <select name="behavior"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+          <option value="">— Одбери —</option>
+          {% for b in behaviors %}
+          <option value="{{ b.name }}" {% if cert and cert.behavior == b.name %}selected{% endif %}>{{ b.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Изостаноци оправдани</label>
+        <input type="text" name="absences_justified" value="{{ cert.absences_justified if cert else '' }}"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Изостаноци неоправдани</label>
+        <input type="text" name="absences_unjustified" value="{{ cert.absences_unjustified if cert else '' }}"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Заврши __ година (римски + букви)</label>
+        <select name="completed_year"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+          <option value="">— Одбери —</option>
+          <option value="I (прва)" {% if cert and cert.completed_year == 'I (прва)' %}selected{% endif %}>I (прва)</option>
+          <option value="II (втора)" {% if cert and cert.completed_year == 'II (втора)' %}selected{% endif %}>II (втора)</option>
+          <option value="III (трета)" {% if cert and cert.completed_year == 'III (трета)' %}selected{% endif %}>III (трета)</option>
+          <option value="IV (четврта)" {% if cert and cert.completed_year == 'IV (четврта)' %}selected{% endif %}>IV (четврта)</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Гимназиско/стручно</label>
+        <select name="education_type"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+          <option value="">— Одбери —</option>
+          <option value="гимназиско" {% if cert and cert.education_type == 'гимназиско' %}selected{% endif %}>гимназиско</option>
+          <option value="стручно" {% if cert and cert.education_type == 'стручно' %}selected{% endif %}>стручно</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Подрачје/струка/сектор/насока</label>
+        <select name="area"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+          <option value="">— Одбери —</option>
+          {% for a in [
+            'Графичка струка',
+            'Сообраќајна струка',
+            'Градежно – геодетска струка',
+            'Геолошко рударска и металуршка струка',
+            'Лични услуги',
+            'Текстилно- кожарска струка',
+            'Угостителско – туристичка струка',
+            'Гимназиско'
+          ] %}
+          <option value="{{ a }}" {% if cert and cert.area == a %}selected{% endif %}>{{ a }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Образовен профил/квалификација</label>
+        <select name="profile"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+          <option value="">— Одбери —</option>
+          <optgroup label="Стручно образование">
+            {% set stručni = [
+              'Графички техничар',
+              'Графички уредник-дизајнер',
+              'Печатар/изработувач на визуелни апликации',
+              'Техничар за патен сообраќај',
+              'Техничар за транспорт и шпедиција',
+              'Архитектонски техничар',
+              'Градежен техничар',
+              'Геолошко – рударски технничар (реформирано образование)',
+              'Техничар за козметичка нега и убавина',
+              'Техничар за дизајн на облека',
+              'Техничар за изработка на облека',
+              'Хотелско – туристички техничар'
+            ] %}
+            {% for p in stručni %}
+            <option value="{{ p }}" {% if cert and cert.profile == p %}selected{% endif %}>{{ p }}</option>
+            {% endfor %}
+          </optgroup>
+          <optgroup label="Гимназиско образование">
+            {% set gimnaziski = [
+              'природно-математичко подрачје-А',
+              'природно-математичко подрачје-Б',
+              'општествено-хуманистичко-А',
+              'општествено-хуманистичко-Б',
+              'јазично-уметничко подрачје-А',
+              'јазично-уметничко подрачје-Б',
+              'Билингвална паралелка, англиско – македонска'
+            ] %}
+            {% for p in gimnaziski %}
+            <option value="{{ p }}" {% if cert and cert.profile == p %}selected{% endif %}>{{ p }}</option>
+            {% endfor %}
+          </optgroup>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Со општ успех</label>
+        <input type="text" name="overall_grade" value="{{ cert.overall_grade if cert else '' }}"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Место</label>
+        <input type="text" name="place" value="{{ cert.place if cert else '' }}"
+            list="mkCitiesList"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Датум</label>
+        <input type="text" name="cert_date" value="{{ cert.cert_date if cert else '' }}"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Дел. бр.</label>
+        <input type="text" name="del_br" value="{{ cert.del_br if cert else '' }}"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+      </div>
+    </div>
+  </div>
+
+  <!-- Verification -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-4">
+    <h2 class="font-semibold mb-4 text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 pb-2">Верификација на училиштето</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Акт број</label>
+        <input type="text" name="verification_act" value="{{ cert.verification_act if cert else settings.get('verification_act', '') }}"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Датум</label>
+        <input type="text" name="verification_date" value="{{ cert.verification_date if cert else settings.get('verification_date', '') }}"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Издаден од</label>
+        <input type="text" name="verification_issued_by" value="{{ cert.verification_issued_by if cert else settings.get('verification_issued_by', '') }}"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+      </div>
+    </div>
+  </div>
+
+  <!-- Save buttons -->
+  <div class="flex gap-3 justify-end">
+    <a href="{{ url_for('certificates_list') }}" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-700">Откажи</a>
+    <button type="submit" name="status" value="draft"
+        class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-sm font-medium">Зачувај нацрт</button>
+    <button type="submit" name="status" value="ready"
+        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-medium">Зачувај готово</button>
+  </div>
+
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let subjectCount = document.querySelectorAll('.subject-row').length;
+
+const GRADE_MAP = {'Одличен': '5', 'Мн.Добар': '4', 'Добар': '3', 'Доволен': '2', 'Недоволен': '1'};
+
+function fillGradeNum(select) {
+    const row = select.closest('.subject-row');
+    row.querySelector('[name^="grade_num_"]').value = GRADE_MAP[select.value] || '';
+}
+
+function addSubjectRow() {
+    const container = document.getElementById('subjectsContainer');
+    const i = subjectCount++;
+    const row = document.createElement('div');
+    row.className = 'grid grid-cols-12 gap-2 items-center subject-row';
+    row.innerHTML = `
+        <div class="col-span-6">
+            <input type="text" name="subject_${i}" list="subjectsList"
+                class="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+        </div>
+        <div class="col-span-4">
+            <select name="grade_text_${i}" onchange="fillGradeNum(this)"
+                class="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+              <option value="">— —</option>
+              <option value="Одличен">Одличен</option>
+              <option value="Мн.Добар">Мн.Добар</option>
+              <option value="Добар">Добар</option>
+              <option value="Доволен">Доволен</option>
+              <option value="Недоволен">Недоволен</option>
+            </select>
+        </div>
+        <div class="col-span-1">
+            <input type="text" name="grade_num_${i}" maxlength="1"
+                class="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-center">
+        </div>
+        <div class="col-span-1 text-center">
+            <button type="button" onclick="removeRow(this)" class="text-red-400 hover:text-red-600 text-lg leading-none">×</button>
+        </div>`;
+    container.appendChild(row);
+}
+
+function removeRow(btn) {
+    btn.closest('.subject-row').remove();
+    renumberRows();
+}
+
+function renumberRows() {
+    document.querySelectorAll('.subject-row').forEach((row, i) => {
+        row.querySelector('[name^="subject_"]').name = `subject_${i}`;
+        row.querySelector('[name^="grade_text_"]').name = `grade_text_${i}`;
+        row.querySelector('[name^="grade_num_"]').name = `grade_num_${i}`;
+    });
+    subjectCount = document.querySelectorAll('.subject-row').length;
+}
+
+function loadStudents(classId) {
+    const select = document.getElementById('studentSelect');
+    select.innerHTML = '<option value="">— Одбери ученик —</option>';
+    if (!classId) return;
+    fetch(`/api/students/${classId}`)
+        .then(r => r.json())
+        .then(students => {
+            students.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = `${s.last_name} ${s.first_name}`;
+                select.appendChild(opt);
+            });
+        });
+}
+
+function fillStudent(studentId) {
+    if (!studentId) return;
+    fetch(`/api/student/${studentId}`)
+        .then(r => r.json())
+        .then(s => {
+            document.getElementById('studentName').value = `${s.last_name} ${s.first_name}`;
+            document.getElementById('parentName').value = s.parent_name || '';
+            document.getElementById('birthDate').value = s.birth_date || '';
+            document.getElementById('birthPlace').value = s.birth_place || '';
+            document.getElementById('birthMunicipality').value = s.birth_municipality || '';
+            document.getElementById('citizenship').value = s.citizenship || '';
+            const countrySelect = document.getElementById('birthCountry');
+            if (s.birth_country) {
+                for (let opt of countrySelect.options) {
+                    if (opt.value === s.birth_country) { opt.selected = true; break; }
+                }
+            }
+            toggleBirthPlace();
+        });
+}
+
+function toggleBirthPlace() {
+    const country = document.getElementById('birthCountry').value;
+    const wrap = document.getElementById('birthPlaceWrap');
+    const label = wrap.querySelector('label');
+    if (country === 'Република Северна Македонија') {
+        label.textContent = 'Место на раѓање';
+    } else {
+        label.textContent = 'Место на раѓање (рачно)';
+    }
+}
+
+toggleBirthPlace();
+</script>
+{% endblock %}

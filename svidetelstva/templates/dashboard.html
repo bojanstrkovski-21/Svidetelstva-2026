@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block title %}Почетна — Сведителства{% endblock %}
+{% block content %}
+
+<div class="mb-6 flex items-center justify-between">
+    <h1 class="text-2xl font-bold">Почетна</h1>
+    <a href="{{ url_for('certificate_new') }}"
+        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition">
+        + Ново сведителство
+    </a>
+</div>
+
+{% if stats %}
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm text-center">
+        <div class="text-3xl font-bold text-blue-600">{{ stats.students }}</div>
+        <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">Ученици</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm text-center">
+        <div class="text-3xl font-bold text-gray-700 dark:text-gray-200">{{ stats.certificates }}</div>
+        <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">Сведителства</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm text-center">
+        <div class="text-3xl font-bold text-green-600">{{ stats.ready }}</div>
+        <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">Готови</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm text-center">
+        <div class="text-3xl font-bold text-yellow-500">{{ stats.draft }}</div>
+        <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">Нацрти</div>
+    </div>
+</div>
+{% endif %}
+
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <h2 class="font-semibold">Последни сведителства</h2>
+        <a href="{{ url_for('certificates_list') }}" class="text-sm text-blue-600 dark:text-blue-400 hover:underline">Сите →</a>
+    </div>
+    {% if recent %}
+    <div class="divide-y divide-gray-100 dark:divide-gray-700">
+        {% for cert in recent %}
+        <div class="px-6 py-3 flex items-center justify-between">
+            <div>
+                <span class="font-medium">{{ cert.student_name or '—' }}</span>
+                <span class="text-sm text-gray-500 dark:text-gray-400 ml-2">{{ cert.class_name or '' }}</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-xs px-2 py-1 rounded-full
+                    {% if cert.status == 'ready' %}bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300
+                    {% else %}bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300{% endif %}">
+                    {{ 'Готово' if cert.status == 'ready' else 'Нацрт' }}
+                </span>
+                <a href="{{ url_for('certificate_edit', cert_id=cert.id) }}" class="text-sm text-blue-600 dark:text-blue-400 hover:underline">Уреди</a>
+                <a href="{{ url_for('certificate_print', cert_id=cert.id) }}" class="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">Печати</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="px-6 py-8 text-center text-gray-400">
+        Нема сведителства. <a href="{{ url_for('certificate_new') }}" class="text-blue-600 dark:text-blue-400 hover:underline">Креирај prvo.</a>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

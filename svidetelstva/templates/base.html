@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="mk" class="">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Сведителства{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <script>
+        if (localStorage.getItem('theme') === 'dark' ||
+            (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
+
+    {% if current_user.is_authenticated %}
+    <nav class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 flex items-center justify-between h-14">
+            <div class="flex items-center gap-6">
+                <a href="{{ url_for('dashboard') }}" class="font-semibold text-blue-600 dark:text-blue-400">Сведителства</a>
+                <a href="{{ url_for('certificates_list') }}" class="text-sm hover:text-blue-600 dark:hover:text-blue-400">Сведителства</a>
+                <a href="{{ url_for('certificate_new') }}" class="text-sm hover:text-blue-600 dark:hover:text-blue-400">+ Ново</a>
+                {% if current_user.role == 'admin' %}
+                <div class="relative group">
+                    <button class="text-sm hover:text-blue-600 dark:hover:text-blue-400">Администрација ▾</button>
+                    <div class="absolute left-0 top-full hidden group-hover:block bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg z-10 w-44">
+                        <a href="{{ url_for('admin_dashboard') }}" class="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700">Преглед</a>
+                        <a href="{{ url_for('admin_students') }}" class="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700">Ученици</a>
+                        <a href="{{ url_for('admin_subjects') }}" class="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700">Предмети</a>
+                        <a href="{{ url_for('admin_classes') }}" class="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700">Паралелки</a>
+                        <a href="{{ url_for('admin_users') }}" class="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700">Корисници</a>
+                        <a href="{{ url_for('admin_settings') }}" class="block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700">Поставки</a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="flex items-center gap-4">
+                <span class="text-sm text-gray-500 dark:text-gray-400">{{ current_user.full_name or current_user.username }}</span>
+                <button onclick="toggleTheme()" class="text-sm px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700" title="Смени тема">☀/☾</button>
+                <a href="{{ url_for('logout') }}" class="text-sm text-red-500 hover:text-red-700">Одјави се</a>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="max-w-7xl mx-auto px-4 mt-4 space-y-2">
+        {% for category, message in messages %}
+        <div class="px-4 py-3 rounded text-sm
+            {% if category == 'error' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+            {% else %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <main class="max-w-7xl mx-auto px-4 py-6">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                html.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
