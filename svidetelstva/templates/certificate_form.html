@@ -14,6 +14,10 @@
 
 <form method="POST" id="certForm">
 
+  <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4 text-sm">
+    Училиште: <strong>{{ settings.get('school_name', '') or 'Нема внесено назив во Поставки' }}</strong>
+  </div>
+
   <!-- Student selection -->
   <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-4">
     <h2 class="font-semibold mb-4 text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 pb-2">Ученик</h2>
@@ -28,46 +32,49 @@
           {% endfor %}
         </select>
       </div>
-      <div>
-        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Ученик</label>
-        <select name="student_id" id="studentSelect" onchange="fillStudent(this.value)"
+      <div class="md:col-span-2">
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Ученик (име и презиме)</label>
+        <input type="hidden" name="student_id" id="studentId" value="{{ cert.student_id if cert and cert.student_id else '' }}">
+        <input type="text" name="student_name" id="studentName" value="{{ cert.student_name if cert and cert.student_name else '' }}"
+            list="studentsList" onchange="selectStudentByName(this.value)" onblur="selectStudentByName(this.value)"
+            placeholder="Пребарај или одбери ученик"
             class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
-          <option value="">— Одбери ученик —</option>
+        <datalist id="studentsList">
           {% if cert and cert.student_id %}
-          <option value="{{ cert.student_id }}" selected>{{ cert.student_name }}</option>
+          <option value="{{ cert.student_name }}">
           {% endif %}
-        </select>
-      </div>
-      <div>
-        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Ime и презиме</label>
-        <input type="text" name="student_name" id="studentName" value="{{ cert.student_name if cert else '' }}"
-            readonly
-            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-600 text-sm cursor-default">
-        <p class="text-xs text-gray-400 mt-0.5">Авто-пополнето</p>
+        </datalist>
       </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
       <div class="md:col-span-2">
         <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Име на родителот/старателот</label>
-        <input type="text" name="parent_name" id="parentName" value="{{ cert.parent_name if cert else '' }}"
+        <input type="text" name="parent_name" id="parentName" value="{{ cert.parent_name if cert and cert.parent_name else '' }}"
             class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
       </div>
       <div>
         <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Роден/а на (година)</label>
-        <input type="text" name="birth_date" id="birthDate" value="{{ cert.birth_date if cert else '' }}"
-            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+        <input type="text" name="birth_date" id="birthDate" value="{{ cert.birth_date if cert and cert.birth_date else '' }}"
+            class="js-date-picker w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm"
+            placeholder="дд.мм.гггг" autocomplete="off"
+            data-allow-input="true"
+            data-date-format="Y-m-d"
+            data-alt-format="d.m.Y"
+            data-alt-input="true"
+            data-locale="mk"
+            data-theme="light"
+            >
       </div>
       <div>
         <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Општина на раѓање</label>
-        <input type="text" name="birth_municipality" id="birthMunicipality" value="{{ cert.birth_municipality if cert else '' }}"
-            list="mkCitiesList"
+        <select name="birth_municipality" id="birthMunicipality"
             class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
-        <datalist id="mkCitiesList">
+          <option value="">— Одбери —</option>
           {% for city in mk_cities %}
-          <option value="{{ city }}">
+          <option value="{{ city }}" {% if cert and cert.birth_municipality == city %}selected{% endif %}>{{ city }}</option>
           {% endfor %}
-        </datalist>
+        </select>
       </div>
     </div>
 
@@ -76,9 +83,9 @@
         <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Држава на раѓање</label>
         <select name="birth_country" id="birthCountry" onchange="toggleBirthPlace()"
             class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+          <option value="">— Одбери држава —</option>
           {% for country in countries %}
-          <option value="{{ country.name }}" {% if cert and cert.birth_country == country.name %}selected
-              {% elif not cert and country.name == 'Република Северна Македонија' %}selected{% endif %}>
+          <option value="{{ country.name }}" {% if cert and cert.birth_country == country.name %}selected{% endif %}>
             {{ country.name }}
           </option>
           {% endfor %}
@@ -86,13 +93,17 @@
       </div>
       <div id="birthPlaceWrap">
         <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Место на раѓање</label>
-        <input type="text" name="birth_place" id="birthPlace" value="{{ cert.birth_place if cert else '' }}"
-            list="mkCitiesList"
+        <select name="birth_place" id="birthPlace"
             class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+          <option value="">— Одбери —</option>
+          {% for city in mk_cities %}
+          <option value="{{ city }}" {% if cert and cert.birth_place == city %}selected{% endif %}>{{ city }}</option>
+          {% endfor %}
+        </select>
       </div>
       <div>
         <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Државјанство</label>
-        <input type="text" name="citizenship" id="citizenship" value="{{ cert.citizenship if cert else 'македонско' }}"
+        <input type="text" name="citizenship" id="citizenship" value="{{ cert.citizenship if cert and cert.citizenship else 'македонско' }}"
             class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
       </div>
     </div>
@@ -101,11 +112,31 @@
   <!-- School year info -->
   <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-4">
     <h2 class="font-semibold mb-4 text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 pb-2">Учебна година</h2>
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 md:grid-cols-6 gap-4">
       <div>
-        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Учебна година (20__/20__)</label>
-        <input type="text" name="school_year" value="{{ cert.school_year if cert else '' }}" placeholder="2025/2026"
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">За завршена ___ година (римски + букви)</label>
+        <select name="completed_year_top"
             class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+          <option value="">— Одбери —</option>
+          <option value="I (прва)" {% if cert and cert.completed_year_top == 'I (прва)' %}selected{% endif %}>I (прва)</option>
+          <option value="II (втора)" {% if cert and cert.completed_year_top == 'II (втора)' %}selected{% endif %}>II (втора)</option>
+          <option value="III (трета)" {% if cert and cert.completed_year_top == 'III (трета)' %}selected{% endif %}>III (трета)</option>
+          <option value="IV (четврта)" {% if cert and cert.completed_year_top == 'IV (четврта)' %}selected{% endif %}>IV (четврта)</option>
+        </select>
+      </div>
+      {% set sy_parts = (cert.school_year or '').split('/') if cert else [] %}
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Учебна година (прв дел)</label>
+        <input type="hidden" name="school_year" id="schoolYearHidden" value="{{ cert.school_year if cert and cert.school_year else '' }}">
+        <input type="text" id="schoolYearFrom" value="{{ sy_parts[0][-2:] if sy_parts|length > 0 and sy_parts[0] else '' }}" placeholder="25"
+          maxlength="2" inputmode="numeric" oninput="syncSchoolYear()"
+        class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Учебна година (втор дел)</label>
+        <input type="text" id="schoolYearTo" value="{{ sy_parts[1][-2:] if sy_parts|length > 1 and sy_parts[1] else '' }}" placeholder="26"
+          maxlength="2" inputmode="numeric" oninput="syncSchoolYear()"
+        class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
       </div>
       <div>
         <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">По __ пат учеше (со букви)</label>
@@ -113,7 +144,7 @@
             class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
       </div>
       <div>
-        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Во __ година (римски + букви)</label>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Пат учеше во __ година (римски + букви)</label>
         <select name="class_year"
             class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
           <option value="">— Одбери —</option>
@@ -126,6 +157,12 @@
       <div>
         <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Главна книга бр.</label>
         <input type="text" name="main_book_number" value="{{ cert.main_book_number if cert else '' }}"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Година по главна книга (/20__)</label>
+        <input type="text" name="main_book_year" value="{{ cert.main_book_year if cert else '' }}" placeholder="26"
+          maxlength="2" inputmode="numeric"
             class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
       </div>
     </div>
@@ -155,7 +192,7 @@
                 class="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
           </div>
           <div class="col-span-4">
-            <select name="grade_text_{{ i }}" onchange="fillGradeNum(this)"
+            <select name="grade_text_{{ i }}" onchange="fillGradeNum(this); updateOverallGradeFromSubjects()"
                 class="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
               <option value="">— —</option>
               <option value="Одличен" {% if sg.grade_text == 'Одличен' %}selected{% endif %}>Одличен</option>
@@ -182,7 +219,7 @@
                 class="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
           </div>
           <div class="col-span-4">
-            <select name="grade_text_{{ i }}" onchange="fillGradeNum(this)"
+            <select name="grade_text_{{ i }}" onchange="fillGradeNum(this); updateOverallGradeFromSubjects()"
                 class="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
               <option value="">— —</option>
               <option value="Одличен">Одличен</option>
@@ -282,7 +319,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
       <div>
         <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Образовен профил/квалификација</label>
-        <select name="profile"
+        <select name="profile" id="profileSelect"
             class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
           <option value="">— Одбери —</option>
           <optgroup label="Стручно образование">
@@ -322,26 +359,48 @@
       </div>
       <div>
         <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Со општ успех</label>
-        <input type="text" name="overall_grade" value="{{ cert.overall_grade if cert else '' }}"
-            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+        <div class="flex gap-2">
+          <select name="overall_grade" id="overallGrade"
+              class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+            <option value="">— Одбери —</option>
+            {% for g in ['Одличен', 'Мн.Добар', 'Добар', 'Доволен', 'Недоволен'] %}
+            <option value="{{ g }}" {% if cert and cert.overall_grade == g %}selected{% endif %}>{{ g }}</option>
+            {% endfor %}
+          </select>
+          <button type="button" onclick="updateOverallGradeFromSubjects()"
+              class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm">Авто</button>
+        </div>
       </div>
     </div>
 
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
       <div>
         <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Место</label>
-        <input type="text" name="place" value="{{ cert.place if cert else '' }}"
+        <input type="text" name="place" value="{{ cert.place if cert and cert.place else '' }}"
             list="mkCitiesList"
             class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+        <datalist id="mkCitiesList">
+          {% for city in mk_cities %}
+          <option value="{{ city }}">
+          {% endfor %}
+        </datalist>
       </div>
       <div>
         <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Датум</label>
-        <input type="text" name="cert_date" value="{{ cert.cert_date if cert else '' }}"
-            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+        <input type="text" name="cert_date" value="{{ cert.cert_date if cert and cert.cert_date else '' }}"
+            class="js-date-picker w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm"
+            placeholder="дд.мм.гггг" autocomplete="off"
+            data-allow-input="true"
+            data-date-format="Y-m-d"
+            data-alt-format="d.m.Y"
+            data-alt-input="true"
+            data-locale="mk"
+            data-theme="light"
+            >
       </div>
       <div>
         <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Дел. бр.</label>
-        <input type="text" name="del_br" value="{{ cert.del_br if cert else '' }}"
+        <input type="text" name="del_br" value="{{ cert.del_br if cert and cert.del_br else '' }}"
             class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
       </div>
     </div>
@@ -353,18 +412,32 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div>
         <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Акт број</label>
-        <input type="text" name="verification_act" value="{{ cert.verification_act if cert else settings.get('verification_act', '') }}"
+        <select name="verification_act" id="verificationAct"
+            data-current="{{ cert.verification_act if cert and cert.verification_act else settings.get('verification_act', '') }}"
             class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+          <option value="">— Одбери —</option>
+        </select>
       </div>
       <div>
         <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Датум</label>
-        <input type="text" name="verification_date" value="{{ cert.verification_date if cert else settings.get('verification_date', '') }}"
-            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+        <input type="text" name="verification_date" value="{{ cert.verification_date if cert and cert.verification_date else settings.get('verification_date', '') }}"
+            class="js-date-picker w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm"
+            placeholder="дд.мм.гггг" autocomplete="off"
+            data-allow-input="true"
+            data-date-format="Y-m-d"
+            data-alt-format="d.m.Y"
+            data-alt-input="true"
+            data-locale="mk"
+            data-theme="light"
+            >
       </div>
       <div>
         <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Издаден од</label>
-        <input type="text" name="verification_issued_by" value="{{ cert.verification_issued_by if cert else settings.get('verification_issued_by', '') }}"
+        <select name="verification_issued_by" id="verificationIssuedBy"
+            data-current="{{ cert.verification_issued_by if cert and cert.verification_issued_by else settings.get('ministry_name', settings.get('verification_issued_by', '')) }}"
             class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+          <option value="">— Одбери —</option>
+        </select>
       </div>
     </div>
   </div>
@@ -382,14 +455,247 @@
 {% endblock %}
 
 {% block scripts %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/mk.js"></script>
+<style>
+  .flatpickr-calendar {
+    background: #1f2937;
+    border: 1px solid #374151;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+    font-size: 12px;
+    width: 260px;
+    border-radius: 0.25rem;
+  }
+
+  .flatpickr-months,
+  .flatpickr-weekdays,
+  .flatpickr-day,
+  .flatpickr-weekday,
+  .flatpickr-current-month,
+  .flatpickr-current-month .cur-month,
+  .flatpickr-current-month input.cur-year,
+  .flatpickr-current-month .flatpickr-monthDropdown-months,
+  .flatpickr-current-month .flatpickr-monthDropdown-months option {
+    color: #e2e2e2 !important;
+  }
+
+  .flatpickr-current-month .cur-month,
+  .flatpickr-current-month .flatpickr-monthDropdown-months {
+    font-weight: 400 !important;
+  }
+
+  .flatpickr-weekday {
+    font-weight: 400 !important;
+  }
+
+  .flatpickr-current-month input.cur-year,
+  .flatpickr-day {
+    color: #e2e2e2 !important;
+  }
+
+  .flatpickr-months .flatpickr-month,
+  .flatpickr-weekdays {
+    background: #111827;
+  }
+
+  .flatpickr-day {
+    max-width: 32px;
+    height: 32px;
+    line-height: 32px;
+    border-radius: 6px;
+  }
+
+  .flatpickr-day:hover,
+  .flatpickr-day:focus {
+    background: #374151;
+    border-color: #374151;
+  }
+
+  .flatpickr-day.selected,
+  .flatpickr-day.startRange,
+  .flatpickr-day.endRange {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #ffffff;
+  }
+
+  .flatpickr-day.today {
+    border-color: #60a5fa;
+  }
+
+  .flatpickr-day.prevMonthDay,
+  .flatpickr-day.nextMonthDay,
+  .flatpickr-day.flatpickr-disabled {
+    color: #7b7b7b !important;
+    opacity: 0.55;
+  }
+
+  .flatpickr-months .flatpickr-prev-month svg,
+  .flatpickr-months .flatpickr-next-month svg {
+    fill: #d1d5db;
+  }
+
+  .flatpickr-time,
+  .numInputWrapper span {
+    border-color: #374151;
+  }
+
+  .flatpickr-calendar.arrowTop:before,
+  .flatpickr-calendar.arrowTop:after {
+    border-bottom-color: #1f2937;
+  }
+</style>
 <script>
 let subjectCount = document.querySelectorAll('.subject-row').length;
 
 const GRADE_MAP = {'Одличен': '5', 'Мн.Добар': '4', 'Добар': '3', 'Доволен': '2', 'Недоволен': '1'};
+const ACT_ENTRIES_RAW = {{ settings.get('verification_act_entries_json', '[]')|tojson }};
+const MINISTRY_ENTRIES_RAW = {{ settings.get('ministry_entries_json', '[]')|tojson }};
+const LEGACY_ACT = {{ settings.get('verification_act', '')|tojson }};
+const LEGACY_MINISTRY = {{ settings.get('ministry_name', settings.get('verification_issued_by', ''))|tojson }};
+
+function initDatePickers() {
+  const locale = (window.flatpickr && flatpickr.l10ns && flatpickr.l10ns.mk) ? flatpickr.l10ns.mk : undefined;
+  document.querySelectorAll('.js-date-picker').forEach((el) => {
+    flatpickr(el, {
+      locale,
+      dateFormat: el.dataset.dateFormat || 'Y-m-d',
+      altFormat: el.dataset.altFormat || 'd.m.Y',
+      altInput: el.dataset.altInput === 'true',
+      allowInput: el.dataset.allowInput === 'true',
+      disableMobile: true,
+      clickOpens: true,
+      monthSelectorType: 'static'
+    });
+  });
+}
 
 function fillGradeNum(select) {
     const row = select.closest('.subject-row');
     row.querySelector('[name^="grade_num_"]').value = GRADE_MAP[select.value] || '';
+}
+
+function syncSchoolYear() {
+  const from = (document.getElementById('schoolYearFrom').value || '').replace(/\D/g, '').slice(0, 2);
+  const to = (document.getElementById('schoolYearTo').value || '').replace(/\D/g, '').slice(0, 2);
+  document.getElementById('schoolYearFrom').value = from;
+  document.getElementById('schoolYearTo').value = to;
+  document.getElementById('schoolYearHidden').value = from && to ? `${from}/${to}` : '';
+}
+
+function gradeNumToText(avg) {
+  if (avg >= 4.5) return 'Одличен';
+  if (avg >= 3.5) return 'Мн.Добар';
+  if (avg >= 2.5) return 'Добар';
+  if (avg >= 1.5) return 'Доволен';
+  return 'Недоволен';
+}
+
+function updateOverallGradeFromSubjects() {
+  const selects = Array.from(document.querySelectorAll('[name^="grade_text_"]'));
+  const nums = selects
+    .map(s => Number(GRADE_MAP[s.value] || 0))
+    .filter(n => n > 0);
+  if (!nums.length) return;
+  const avg = nums.reduce((a, b) => a + b, 0) / nums.length;
+  const grade = gradeNumToText(avg);
+  const overall = document.getElementById('overallGrade');
+  if (overall) overall.value = grade;
+}
+
+function cleanValue(v) {
+  if (v === null || v === undefined) return '';
+  const s = String(v).trim();
+  return s.toLowerCase() === 'none' ? '' : s;
+}
+
+function parseEntries(raw, fallback = []) {
+  try {
+    const parsed = JSON.parse(raw || '[]');
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function setSelectOptions(selectEl, options, currentValue) {
+  if (!selectEl) return;
+  selectEl.innerHTML = '<option value="">— Одбери —</option>';
+  options.forEach(({ value, label }) => {
+    const opt = document.createElement('option');
+    opt.value = value;
+    opt.textContent = label;
+    if (currentValue && currentValue === value) {
+      opt.selected = true;
+    }
+    selectEl.appendChild(opt);
+  });
+
+  if (currentValue && !options.some((o) => o.value === currentValue)) {
+    const custom = document.createElement('option');
+    custom.value = currentValue;
+    custom.textContent = currentValue;
+    custom.selected = true;
+    selectEl.appendChild(custom);
+  }
+}
+
+function rebuildVerificationSelectors() {
+  const profile = cleanValue(document.getElementById('profileSelect')?.value || '');
+  const actSelect = document.getElementById('verificationAct');
+  const ministrySelect = document.getElementById('verificationIssuedBy');
+
+  const actCurrent = cleanValue(actSelect?.value || actSelect?.dataset.current || '');
+  const ministryCurrent = cleanValue(ministrySelect?.value || ministrySelect?.dataset.current || '');
+
+  const actEntries = parseEntries(ACT_ENTRIES_RAW, []).filter((e) => e && e.act);
+  const ministryEntries = parseEntries(MINISTRY_ENTRIES_RAW, []).filter((e) => e && e.ministry);
+
+  const filteredActs = actEntries.filter((e) => !e.profile || !profile || e.profile === profile);
+  const filteredMinistries = ministryEntries.filter((e) => !e.profile || !profile || e.profile === profile);
+
+  const actOptionsSource = filteredActs.length ? filteredActs : actEntries;
+  const ministryOptionsSource = filteredMinistries.length ? filteredMinistries : ministryEntries;
+
+  const actOptions = actOptionsSource.map((e) => ({
+    value: e.act,
+    label: e.profile ? `${e.act} — ${e.profile}` : e.act
+  }));
+
+  const ministryOptions = ministryOptionsSource.map((e) => ({
+    value: e.ministry,
+    label: e.profile ? `${e.ministry} — ${e.profile}` : e.ministry
+  }));
+
+  if (!actOptions.length && LEGACY_ACT) {
+    actOptions.push({ value: LEGACY_ACT, label: LEGACY_ACT });
+  }
+  if (!ministryOptions.length && LEGACY_MINISTRY) {
+    ministryOptions.push({ value: LEGACY_MINISTRY, label: LEGACY_MINISTRY });
+  }
+
+  setSelectOptions(actSelect, actOptions, actCurrent);
+  setSelectOptions(ministrySelect, ministryOptions, ministryCurrent);
+  if (actSelect) actSelect.dataset.current = actSelect.value || actCurrent;
+  if (ministrySelect) ministrySelect.dataset.current = ministrySelect.value || ministryCurrent;
+}
+
+function setSelectValue(selectEl, value) {
+  const v = cleanValue(value);
+  if (!selectEl) return;
+  if (!v) {
+    selectEl.value = '';
+    return;
+  }
+  const hasOption = Array.from(selectEl.options).some(o => o.value === v);
+  if (!hasOption) {
+    const opt = document.createElement('option');
+    opt.value = v;
+    opt.textContent = v;
+    selectEl.appendChild(opt);
+  }
+  selectEl.value = v;
 }
 
 function addSubjectRow() {
@@ -403,7 +709,7 @@ function addSubjectRow() {
                 class="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
         </div>
         <div class="col-span-4">
-            <select name="grade_text_${i}" onchange="fillGradeNum(this)"
+            <select name="grade_text_${i}" onchange="fillGradeNum(this); updateOverallGradeFromSubjects()"
                 class="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
               <option value="">— —</option>
               <option value="Одличен">Одличен</option>
@@ -437,20 +743,109 @@ function renumberRows() {
     subjectCount = document.querySelectorAll('.subject-row').length;
 }
 
+let studentsCache = [];
+
 function loadStudents(classId) {
-    const select = document.getElementById('studentSelect');
-    select.innerHTML = '<option value="">— Одбери ученик —</option>';
-    if (!classId) return;
+  const list = document.getElementById('studentsList');
+  const studentId = document.getElementById('studentId');
+  const studentName = document.getElementById('studentName');
+  const previousName = studentName.value;
+  list.innerHTML = '';
+  studentsCache = [];
+  studentId.value = '';
+
+  if (!classId) return;
     fetch(`/api/students/${classId}`)
         .then(r => r.json())
         .then(students => {
+            studentsCache = students;
             students.forEach(s => {
                 const opt = document.createElement('option');
-                opt.value = s.id;
-                opt.textContent = `${s.last_name} ${s.first_name}`;
-                select.appendChild(opt);
+        opt.value = `${s.last_name} ${s.first_name}`;
+        list.appendChild(opt);
             });
+
+            // Keep existing value on edit pages and re-bind hidden student_id if a match exists.
+            if (previousName) {
+                studentName.value = previousName;
+                selectStudentByName(previousName);
+            }
         });
+}
+
+function selectStudentByName(name) {
+  const studentId = document.getElementById('studentId');
+  const exact = studentsCache.find(s => `${s.last_name} ${s.first_name}` === name);
+
+  if (exact) {
+    studentId.value = exact.id || '';
+    fillStudent(studentId.value);
+    return;
+  }
+
+  const normalizedInput = normalizeName(name);
+  if (!normalizedInput) {
+    studentId.value = '';
+    return;
+  }
+
+  let best = null;
+  let bestScore = 0;
+  for (const s of studentsCache) {
+    const fullName = `${s.last_name} ${s.first_name}`;
+    const score = fuzzyScore(normalizeName(fullName), normalizedInput);
+    if (score > bestScore) {
+      bestScore = score;
+      best = s;
+    }
+  }
+
+  // Apply only when confidence is decent to avoid wrong auto-selection.
+  if (best && bestScore >= 0.55) {
+    studentId.value = best.id || '';
+    document.getElementById('studentName').value = `${best.last_name} ${best.first_name}`;
+    fillStudent(studentId.value);
+    return;
+  }
+
+  studentId.value = '';
+}
+
+function normalizeName(value) {
+  return (value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function fuzzyScore(candidate, query) {
+  if (!candidate || !query) return 0;
+  if (candidate === query) return 1;
+  if (candidate.startsWith(query)) return 0.95;
+  if (candidate.includes(query)) return 0.85;
+
+  const cTokens = candidate.split(' ');
+  const qTokens = query.split(' ');
+  let matched = 0;
+  for (const q of qTokens) {
+    if (cTokens.some(c => c.startsWith(q) || c.includes(q))) {
+      matched += 1;
+    }
+  }
+
+  const tokenScore = qTokens.length ? matched / qTokens.length : 0;
+
+  // Simple character subsequence bonus.
+  let i = 0;
+  for (const ch of candidate) {
+    if (ch === query[i]) i += 1;
+    if (i >= query.length) break;
+  }
+  const subseqScore = query.length ? i / query.length : 0;
+
+  return Math.max(tokenScore * 0.8, subseqScore * 0.7);
 }
 
 function fillStudent(studentId) {
@@ -459,17 +854,13 @@ function fillStudent(studentId) {
         .then(r => r.json())
         .then(s => {
             document.getElementById('studentName').value = `${s.last_name} ${s.first_name}`;
-            document.getElementById('parentName').value = s.parent_name || '';
-            document.getElementById('birthDate').value = s.birth_date || '';
-            document.getElementById('birthPlace').value = s.birth_place || '';
-            document.getElementById('birthMunicipality').value = s.birth_municipality || '';
-            document.getElementById('citizenship').value = s.citizenship || '';
+          document.getElementById('parentName').value = cleanValue(s.parent_name);
+          document.getElementById('birthDate').value = cleanValue(s.birth_date);
+          setSelectValue(document.getElementById('birthPlace'), s.birth_place);
+          setSelectValue(document.getElementById('birthMunicipality'), s.birth_municipality);
+          document.getElementById('citizenship').value = cleanValue(s.citizenship);
             const countrySelect = document.getElementById('birthCountry');
-            if (s.birth_country) {
-                for (let opt of countrySelect.options) {
-                    if (opt.value === s.birth_country) { opt.selected = true; break; }
-                }
-            }
+          setSelectValue(countrySelect, s.birth_country);
             toggleBirthPlace();
         });
 }
@@ -486,5 +877,20 @@ function toggleBirthPlace() {
 }
 
 toggleBirthPlace();
+syncSchoolYear();
+updateOverallGradeFromSubjects();
+rebuildVerificationSelectors();
+
+const profileSelect = document.getElementById('profileSelect');
+if (profileSelect) {
+  profileSelect.addEventListener('change', rebuildVerificationSelectors);
+}
+
+const initialClassId = document.getElementById('classSelect').value;
+if (initialClassId) {
+  loadStudents(initialClassId);
+}
+
+initDatePickers();
 </script>
 {% endblock %}

@@ -88,8 +88,16 @@ def init_db():
             class_id INTEGER,
             school_year TEXT,
             attempt_number TEXT,
+            completed_year_top TEXT,
             class_year TEXT,
+            parent_name TEXT,
+            birth_date TEXT,
+            birth_place TEXT,
+            birth_municipality TEXT,
+            birth_country TEXT,
+            citizenship TEXT,
             main_book_number TEXT,
+            main_book_year TEXT,
             subjects_grades TEXT DEFAULT '[]',
             behavior TEXT,
             absences_justified TEXT,
@@ -120,11 +128,32 @@ def init_db():
         );
     ''')
 
+    # Backward-compatible schema migration for older databases.
+    cert_columns = {row['name'] for row in conn.execute("PRAGMA table_info(certificates)").fetchall()}
+    missing_columns = [
+        ('parent_name', 'TEXT'),
+        ('birth_date', 'TEXT'),
+        ('birth_place', 'TEXT'),
+        ('birth_municipality', 'TEXT'),
+        ('birth_country', 'TEXT'),
+        ('citizenship', 'TEXT'),
+        ('completed_year_top', 'TEXT'),
+        ('main_book_year', 'TEXT')
+    ]
+    for col_name, col_type in missing_columns:
+        if col_name not in cert_columns:
+            conn.execute(f'ALTER TABLE certificates ADD COLUMN {col_name} {col_type}')
+
     if not conn.execute('SELECT id FROM users WHERE role="admin"').fetchone():
         conn.execute(
             'INSERT INTO users (username, password_hash, role, full_name) VALUES (?,?,?,?)',
             ('admin', generate_password_hash('admin123'), 'admin', 'Администратор')
         )
+
+    # Ensure standard class set exists: I-1..I-15, II-1..II-15, III-1..III-15, IV-1..IV-15.
+    for year in ['I', 'II', 'III', 'IV']:
+        for idx in range(1, 16):
+            conn.execute('INSERT OR IGNORE INTO classes (name) VALUES (?)', (f'{year}-{idx}',))
 
     first_behavior = conn.execute('SELECT name FROM behavior_types ORDER BY id LIMIT 1').fetchone()
     if not first_behavior or first_behavior['name'] != 'Примерно':
@@ -238,7 +267,17 @@ def init_db():
                 conn.execute('INSERT INTO countries (name) VALUES (?)', (c,))
                 seen.add(c)
 
-    for key, value in [('school_name', ''), ('municipality', '')]:
+    for key, value in [
+        ('school_name', ''),
+        ('municipality', ''),
+        ('verification_act', ''),
+        ('verification_date', ''),
+        ('verification_act_numbers', ''),
+        ('verification_issued_by', ''),
+        ('ministry_name', ''),
+        ('verification_act_entries_json', '[]'),
+        ('ministry_entries_json', '[]')
+    ]:
         conn.execute('INSERT OR IGNORE INTO settings (key, value) VALUES (?,?)', (key, value))
 
     if not conn.execute('SELECT id FROM mk_cities').fetchone():
@@ -651,17 +690,20 @@ def save_certificate(form, user_id):
     conn = get_db()
     cur = conn.execute('''
         INSERT INTO certificates (
-            student_id, student_name, class_id, school_year, attempt_number, class_year,
-            main_book_number, subjects_grades, behavior, absences_justified, absences_unjustified,
+            student_id, student_name, class_id, school_year, attempt_number, completed_year_top, class_year,
+            parent_name, birth_date, birth_place, birth_municipality, birth_country, citizenship,
+            main_book_number, main_book_year, subjects_grades, behavior, absences_justified, absences_unjustified,
             completed_year, education_type, area, profile, overall_grade,
             place, cert_date, del_br, verification_act, verification_date, verification_issued_by,
             status, created_by
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ''', (
         form.get('student_id') or None, form.get('student_name'),
         form.get('class_id') or None, form.get('school_year'),
-        form.get('attempt_number'), form.get('class_year'),
-        form.get('main_book_number'), json.dumps(subjects, ensure_ascii=False),
+        form.get('attempt_number'), form.get('completed_year_top'), form.get('class_year'),
+        form.get('parent_name'), form.get('birth_date'), form.get('birth_place'),
+        form.get('birth_municipality'), form.get('birth_country'), form.get('citizenship'),
+        form.get('main_book_number'), form.get('main_book_year'), json.dumps(subjects, ensure_ascii=False),
         form.get('behavior'), form.get('absences_justified'), form.get('absences_unjustified'),
         form.get('completed_year'), form.get('education_type'), form.get('area'),
         form.get('profile'), form.get('overall_grade'),
@@ -680,8 +722,9 @@ def update_certificate(cert_id, form):
     conn = get_db()
     conn.execute('''
         UPDATE certificates SET
-            student_id=?, student_name=?, class_id=?, school_year=?, attempt_number=?, class_year=?,
-            main_book_number=?, subjects_grades=?, behavior=?, absences_justified=?, absences_unjustified=?,
+            student_id=?, student_name=?, class_id=?, school_year=?, attempt_number=?, completed_year_top=?, class_year=?,
+            parent_name=?, birth_date=?, birth_place=?, birth_municipality=?, birth_country=?, citizenship=?,
+            main_book_number=?, main_book_year=?, subjects_grades=?, behavior=?, absences_justified=?, absences_unjustified=?,
             completed_year=?, education_type=?, area=?, profile=?, overall_grade=?,
             place=?, cert_date=?, del_br=?, verification_act=?, verification_date=?, verification_issued_by=?,
             status=?, updated_at=CURRENT_TIMESTAMP
@@ -689,8 +732,10 @@ def update_certificate(cert_id, form):
     ''', (
         form.get('student_id') or None, form.get('student_name'),
         form.get('class_id') or None, form.get('school_year'),
-        form.get('attempt_number'), form.get('class_year'),
-        form.get('main_book_number'), json.dumps(subjects, ensure_ascii=False),
+        form.get('attempt_number'), form.get('completed_year_top'), form.get('class_year'),
+        form.get('parent_name'), form.get('birth_date'), form.get('birth_place'),
+        form.get('birth_municipality'), form.get('birth_country'), form.get('citizenship'),
+        form.get('main_book_number'), form.get('main_book_year'), json.dumps(subjects, ensure_ascii=False),
         form.get('behavior'), form.get('absences_justified'), form.get('absences_unjustified'),
         form.get('completed_year'), form.get('education_type'), form.get('area'),
         form.get('profile'), form.get('overall_grade'),
@@ -714,6 +759,25 @@ def get_certificate(cert_id):
         return None
     cert = dict(row)
     cert['subjects_grades'] = json.loads(cert['subjects_grades'] or '[]')
+    if not cert.get('completed_year_top'):
+        cert['completed_year_top'] = cert.get('completed_year') or ''
+
+    # Fallback for legacy rows created before these fields were stored in certificates.
+    if cert.get('student_id') and any(not cert.get(k) for k in [
+        'parent_name', 'birth_date', 'birth_place', 'birth_municipality', 'birth_country', 'citizenship'
+    ]):
+        conn = get_db()
+        student = conn.execute('''
+            SELECT parent_name, birth_date, birth_place, birth_municipality, birth_country, citizenship
+            FROM students WHERE id = ?
+        ''', (cert['student_id'],)).fetchone()
+        conn.close()
+        if student:
+            student = dict(student)
+            for key, value in student.items():
+                if not cert.get(key):
+                    cert[key] = value
+
     return cert
 
 
