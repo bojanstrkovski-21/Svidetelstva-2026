@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+{% block title %}Поставки{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">Поставки</h1>
+<form method="POST" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 max-w-lg space-y-4">
+    <div>
+        <label class="block text-sm font-medium mb-1">Назив на средното училиште</label>
+        <input type="text" name="school_name" value="{{ settings.get('school_name', '') }}"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
+    </div>
+    <div>
+        <label class="block text-sm font-medium mb-1">Општина/Град</label>
+        <input type="text" name="municipality" value="{{ settings.get('municipality', '') }}"
+            list="mkCitiesList"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
+        <datalist id="mkCitiesList">
+            {% for city in mk_cities %}
+            <option value="{{ city }}">
+            {% endfor %}
+        </datalist>
+    </div>
+    <hr class="border-gray-200 dark:border-gray-600">
+    <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Верификација на училиштето</h2>
+    <div>
+        <label class="block text-sm font-medium mb-1">Датум на акт</label>
+        <input type="text" name="verification_date" value="{{ settings.get('verification_date', '') }}"
+            class="js-date-picker w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
+            placeholder="дд.мм.гггг" autocomplete="off"
+            data-allow-input="true"
+            data-date-format="Y-m-d"
+            data-alt-format="d.m.Y"
+            data-alt-input="true"
+            data-locale="mk"
+            data-theme="light">
+    </div>
+
+    <div>
+        <label class="block text-sm font-medium mb-2">Акт броеви по профил</label>
+        <input type="hidden" name="verification_act_entries_json" id="verificationActEntriesJson">
+        <div id="actRows" class="space-y-2"></div>
+        <button type="button" onclick="addActRow()"
+            class="mt-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm">Додај нов акт број</button>
+    </div>
+
+    <div>
+        <label class="block text-sm font-medium mb-2">Министерство (Издаден од) по профил/генерација</label>
+        <input type="hidden" name="ministry_entries_json" id="ministryEntriesJson">
+        <div id="ministryRows" class="space-y-2"></div>
+        <button type="button" onclick="addMinistryRow()"
+            class="mt-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm">Додај ново министерство</button>
+    </div>
+
+    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium">Зачувај</button>
+</form>
+
+<template id="actRowTemplate">
+    <div class="grid grid-cols-12 gap-2 items-center">
+        <input type="text" class="act-profile col-span-5 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm" placeholder="Профил (пример: Графички техничар)">
+        <input type="text" class="act-number col-span-5 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm" placeholder="Акт број">
+        <button type="button" class="col-span-2 px-2 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm" onclick="removeConfigRow(this)">Избриши</button>
+    </div>
+</template>
+
+<template id="ministryRowTemplate">
+    <div class="grid grid-cols-12 gap-2 items-center">
+        <input type="text" class="ministry-profile col-span-5 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm" placeholder="Профил/генерација">
+        <input type="text" class="ministry-name col-span-5 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm" placeholder="Име на министерство">
+        <button type="button" class="col-span-2 px-2 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm" onclick="removeConfigRow(this)">Избриши</button>
+    </div>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/mk.js"></script>
+<script>
+const ACT_ENTRIES_RAW = {{ settings.get('verification_act_entries_json', '[]')|tojson }};
+const MINISTRY_ENTRIES_RAW = {{ settings.get('ministry_entries_json', '[]')|tojson }};
+const LEGACY_ACT = {{ settings.get('verification_act', '')|tojson }};
+const LEGACY_MINISTRY = {{ settings.get('ministry_name', settings.get('verification_issued_by', ''))|tojson }};
+
+function parseEntries(raw, fallback = []) {
+    try {
+        const parsed = JSON.parse(raw || '[]');
+        return Array.isArray(parsed) ? parsed : fallback;
+    } catch {
+        return fallback;
+    }
+}
+
+function initDatePickers() {
+    const locale = (window.flatpickr && flatpickr.l10ns && flatpickr.l10ns.mk) ? flatpickr.l10ns.mk : undefined;
+    document.querySelectorAll('.js-date-picker').forEach((el) => {
+        flatpickr(el, {
+            locale,
+            dateFormat: el.dataset.dateFormat || 'Y-m-d',
+            altFormat: el.dataset.altFormat || 'd.m.Y',
+            altInput: el.dataset.altInput === 'true',
+            allowInput: el.dataset.allowInput === 'true',
+            disableMobile: true,
+            clickOpens: true,
+            monthSelectorType: 'static'
+        });
+    });
+}
+
+function removeConfigRow(btn) {
+    btn.closest('.grid').remove();
+}
+
+function addActRow(profile = '', act = '') {
+    const tpl = document.getElementById('actRowTemplate');
+    const node = tpl.content.cloneNode(true);
+    node.querySelector('.act-profile').value = profile;
+    node.querySelector('.act-number').value = act;
+    document.getElementById('actRows').appendChild(node);
+}
+
+function addMinistryRow(profile = '', ministry = '') {
+    const tpl = document.getElementById('ministryRowTemplate');
+    const node = tpl.content.cloneNode(true);
+    node.querySelector('.ministry-profile').value = profile;
+    node.querySelector('.ministry-name').value = ministry;
+    document.getElementById('ministryRows').appendChild(node);
+}
+
+function serializeRows() {
+    const actEntries = Array.from(document.querySelectorAll('#actRows .grid')).map((row) => ({
+        profile: row.querySelector('.act-profile').value.trim(),
+        act: row.querySelector('.act-number').value.trim()
+    })).filter((e) => e.act);
+
+    const ministryEntries = Array.from(document.querySelectorAll('#ministryRows .grid')).map((row) => ({
+        profile: row.querySelector('.ministry-profile').value.trim(),
+        ministry: row.querySelector('.ministry-name').value.trim()
+    })).filter((e) => e.ministry);
+
+    document.getElementById('verificationActEntriesJson').value = JSON.stringify(actEntries);
+    document.getElementById('ministryEntriesJson').value = JSON.stringify(ministryEntries);
+}
+
+const actEntries = parseEntries(ACT_ENTRIES_RAW, []);
+if (actEntries.length) {
+    actEntries.forEach((e) => addActRow(e.profile || '', e.act || ''));
+} else if (LEGACY_ACT) {
+    addActRow('', LEGACY_ACT);
+} else {
+    addActRow('', '');
+}
+
+const ministryEntries = parseEntries(MINISTRY_ENTRIES_RAW, []);
+if (ministryEntries.length) {
+    ministryEntries.forEach((e) => addMinistryRow(e.profile || '', e.ministry || ''));
+} else if (LEGACY_MINISTRY) {
+    addMinistryRow('', LEGACY_MINISTRY);
+} else {
+    addMinistryRow('', '');
+}
+
+document.querySelector('form').addEventListener('submit', serializeRows);
+initDatePickers();
+</script>
+{% endblock %}

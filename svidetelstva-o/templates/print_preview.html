@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="mk">
+<head>
+    <meta charset="UTF-8">
+    <title>Печатење — {{ cert.student_name }}</title>
+    <style>
+        :root {
+            --pp-pad-top: {{ settings.get('print_pad_top', '15')|float }}mm;
+            --pp-pad-right: {{ settings.get('print_pad_right', '18')|float }}mm;
+            --pp-pad-bottom: {{ settings.get('print_pad_bottom', '15')|float }}mm;
+            --pp-pad-left: {{ settings.get('print_pad_left', '18')|float }}mm;
+            --pp-offset-x: {{ settings.get('print_offset_x', '0')|float }}mm;
+            --pp-offset-y: {{ settings.get('print_offset_y', '0')|float }}mm;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; background: #eee; }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            background: white;
+            margin: 10mm auto;
+            padding: var(--pp-pad-top) var(--pp-pad-right) var(--pp-pad-bottom) var(--pp-pad-left);
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .page-bg {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-size: 100% 100%;
+            background-repeat: no-repeat;
+            background-position: top left;
+            opacity: 1;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .page-content {
+            position: relative;
+            z-index: 1;
+            transform: translate(var(--pp-offset-x), var(--pp-offset-y));
+        }
+        .page-1-bg { background-image: url('/static/img/svidtelstvo-1.png'); }
+        .page-2-bg { background-image: url('/static/img/svidtelstvo-2.png'); }
+
+        @media print {
+            .page-bg { display: none; }
+        }
+
+        .no-print {
+            background: #333;
+            color: white;
+            padding: 10px 16px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: end;
+            justify-content: center;
+        }
+        .coord-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: end;
+            justify-content: center;
+        }
+        .coord-controls label { font-size: 12px; opacity: 0.9; display: flex; flex-direction: column; gap: 2px; }
+        .coord-controls input {
+            width: 78px;
+            padding: 4px 6px;
+            border: 1px solid #666;
+            border-radius: 4px;
+            background: #fff;
+            color: #111;
+            font-size: 12px;
+        }
+        .coord-controls button {
+            padding: 6px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .btn-apply { background: #16a34a; color: #fff; }
+        .btn-reset { background: #f59e0b; color: #111; }
+        .print-actions { display: flex; align-items: center; }
+        .no-print button { margin: 0 8px; padding: 6px 16px; cursor: pointer; border: none; border-radius: 4px; }
+        .btn-print { background: #2563eb; color: white; }
+        .btn-close { background: #6b7280; color: white; }
+
+        .field { display: inline-block; border-bottom: 1px solid #000; min-width: 30mm; }
+        .field-wide { min-width: 80mm; }
+        .field-xl { min-width: 120mm; }
+
+        .subjects-table { width: 100%; border-collapse: collapse; margin-top: 2mm; }
+        .subjects-table td { padding: 0.5mm 1mm; vertical-align: bottom; }
+        .subjects-table .td-name { width: 55%; border-bottom: 1px solid #000; }
+        .subjects-table .td-grade-text { width: 30%; border-bottom: 1px solid #000; }
+        .subjects-table .td-grade-num { width: 10%; border-bottom: 1px solid #000; text-align: right; }
+
+        .line { line-height: 2; }
+        .offset-target {
+            display: inline-block;
+            transform: translate(var(--fx, 0mm), var(--fy, 0mm));
+        }
+
+        .offset-panel {
+            width: 100%;
+            max-width: 1200px;
+            background: rgba(0, 0, 0, 0.22);
+            border: 1px solid #555;
+            border-radius: 6px;
+            padding: 8px 10px;
+        }
+        .offset-panel summary {
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            user-select: none;
+            margin-bottom: 6px;
+        }
+        .offset-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+            gap: 6px;
+        }
+        .offset-tools {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+        .offset-tools button,
+        .offset-tools label {
+            padding: 6px 10px;
+            border: 1px solid #666;
+            border-radius: 4px;
+            background: #1f2937;
+            color: #fff;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .offset-tools input[type="file"] {
+            display: none;
+        }
+        .offset-row {
+            display: block;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid #555;
+            border-radius: 6px;
+            padding: 5px;
+        }
+        .offset-row .label {
+            font-size: 12px;
+            display: block;
+            margin-bottom: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .offset-row .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr 52px;
+            gap: 6px;
+            align-items: center;
+        }
+        .offset-row input {
+            width: 100%;
+            padding: 3px 5px;
+            border: 1px solid #666;
+            border-radius: 4px;
+            background: #fff;
+            color: #111;
+            font-size: 12px;
+        }
+        .offset-row button {
+            padding: 4px 6px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #4b5563;
+            color: #fff;
+            font-size: 11px;
+        }
+
+        /* Value-only mode for preview: keep only entered values visible on top of background form. */
+        .page-content.values-only,
+        .page-content.values-only * {
+            color: transparent !important;
+            text-shadow: none !important;
+        }
+
+        .page-content.values-only .field,
+        .page-content.values-only .field *,
+        .page-content.values-only .subjects-table td,
+        .page-content.values-only .subjects-table td * {
+            color: #000 !important;
+        }
+
+        .page-content.values-only * {
+            border-color: transparent !important;
+        }
+
+        .page-content.values-only .field,
+        .page-content.values-only .subjects-table .td-name,
+        .page-content.values-only .subjects-table .td-grade-text,
+        .page-content.values-only .subjects-table .td-grade-num {
+            border-bottom: none !important;
+        }
+
+        @media print {
+            .no-print { display: none; }
+            body { background: white; }
+            .page { margin: 0; box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="no-print">
+    <div class="print-actions">
+        <button class="btn-print" onclick="window.print()">Печати</button>
+        <button class="btn-close" onclick="window.close()">Затвори</button>
+    </div>
+    <div class="coord-controls">
+        <label>Top (mm)<input id="ppTop" type="number" step="0.1" value="{{ settings.get('print_pad_top', '15')|float }}"></label>
+        <label>Right (mm)<input id="ppRight" type="number" step="0.1" value="{{ settings.get('print_pad_right', '18')|float }}"></label>
+        <label>Bottom (mm)<input id="ppBottom" type="number" step="0.1" value="{{ settings.get('print_pad_bottom', '15')|float }}"></label>
+        <label>Left (mm)<input id="ppLeft" type="number" step="0.1" value="{{ settings.get('print_pad_left', '18')|float }}"></label>
+        <label>X (mm)<input id="ppX" type="number" step="0.1" value="{{ settings.get('print_offset_x', '0')|float }}"></label>
+        <label>Y (mm)<input id="ppY" type="number" step="0.1" value="{{ settings.get('print_offset_y', '0')|float }}"></label>
+        <button type="button" class="btn-apply" onclick="applyCoords()">Примени</button>
+        <button type="button" class="btn-reset" onclick="resetCoords()">Ресет</button>
+    </div>
+    <span style="font-size:13px; opacity:0.8; align-self:center;">Само текстот се испраќа на печатарот — позадината не се печати.</span>
+
+    <details class="offset-panel">
+        <summary>Field Offsets (X/Y mm)</summary>
+        <div class="offset-tools">
+            <button type="button" onclick="exportOffsetsJson()">Export JSON</button>
+            <label>
+                Import JSON
+                <input type="file" id="offsetsImportFile" accept="application/json,.json" onchange="importOffsetsJson(event)">
+            </label>
+        </div>
+        <div id="fieldOffsetsGrid" class="offset-grid"></div>
+    </details>
+</div>
+
+<!-- PAGE 1 -->
+<div class="page">
+    <div class="page-bg page-1-bg"></div>
+    <div class="page-content values-only">
+    <div style="text-align:center; margin-bottom: 6mm;">
+        <div class="field field-xl offset-target" data-field="school_name" style="min-width:140mm;">{{ settings.school_name or '' }}</div>
+        <div style="font-size:9pt; color:#666;">(назив на средното училиште)</div>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; margin-bottom:4mm;">
+        <div>
+            <span class="field offset-target" data-field="municipality" style="min-width:60mm;">{{ settings.municipality or '' }}</span>
+            <div style="font-size:9pt; color:#666;">(општина/Град Скопје)</div>
+        </div>
+        <div>
+            Главна книга бр. <span class="field offset-target" data-field="main_book_number" style="min-width:30mm;">{{ cert.main_book_number or '' }}</span>
+            /20<span class="field offset-target" data-field="main_book_year" style="min-width:10mm;">{{ cert.main_book_year or '' }}</span> година
+        </div>
+    </div>
+
+    <div style="text-align:center; margin-bottom:6mm;">
+        за завршена <span class="field offset-target" data-field="completed_year_header" style="min-width:80mm;">{{ cert.completed_year_top or '' }}</span> година
+        <div style="font-size:9pt; color:#666;">(со римски број и со букви)</div>
+    </div>
+
+    <div style="margin-bottom:2mm;">
+        <span class="field field-xl offset-target" data-field="student_name" style="min-width:150mm;">{{ cert.student_name or '' }}</span>
+        <div style="font-size:9pt; color:#666;">(ime и презиме на ученикот/ученичката)</div>
+    </div>
+
+    <div class="line">
+        sin/ќерка на <span class="field offset-target" data-field="parent_name" style="min-width:60mm;">{{ cert.parent_name or '' }}</span>
+        <span style="font-size:9pt; color:#666;">(ime на родителот/старателот)</span>
+        роден/а на <span class="field offset-target" data-field="birth_date" style="min-width:30mm;">{{ cert.birth_date or '' }}</span> година
+    </div>
+    <div class="line">
+        во <span class="field offset-target" data-field="birth_place" style="min-width:60mm;">{{ cert.birth_place or '' }}</span>
+        општина <span class="field offset-target" data-field="birth_municipality" style="min-width:50mm;">{{ cert.birth_municipality or '' }}</span>
+    </div>
+    <div class="line">
+        држава <span class="field offset-target" data-field="birth_country" style="min-width:80mm;">{{ cert.birth_country or '' }}</span>
+        државјанство <span class="field offset-target" data-field="citizenship" style="min-width:40mm;">{{ cert.citizenship or '' }}</span>
+    </div>
+    <div class="line">
+        {% set school_year_parts = (cert.school_year or '').split('/') %}
+        во учебната 20<span class="field offset-target" data-field="school_year_from" style="min-width:8mm;">{{ school_year_parts[0][-2:] if school_year_parts|length > 0 and school_year_parts[0] else '' }}</span>/20<span class="field offset-target" data-field="school_year_to" style="min-width:8mm;">{{ school_year_parts[1][-2:] if school_year_parts|length > 1 and school_year_parts[1] else '' }}</span>
+        година по <span class="field offset-target" data-field="attempt_number" style="min-width:20mm;">{{ cert.attempt_number or '' }}</span>
+        <span style="font-size:9pt; color:#666;">(со букви)</span>
+        пат учеше во <span class="field offset-target" data-field="class_year_body" style="min-width:30mm;">{{ cert.class_year or '' }}</span>
+        <span style="font-size:9pt; color:#666;">(со римски број и со букви)</span>
+    </div>
+    <div class="line">година на средното училиште и го постигна следниот успех:</div>
+
+    <div style="display:flex; justify-content:space-between; margin-top:4mm; margin-bottom:1mm;">
+        <strong>Наставни предмети/модули</strong>
+        <strong>Успех</strong>
+    </div>
+
+    {% set page1_subjects = cert.subjects_grades[:18] %}
+    <table class="subjects-table">
+        {% for sg in page1_subjects %}
+        <tr>
+            <td class="td-name">{{ sg.name }}</td>
+            <td class="td-grade-text">{{ sg.grade_text }}</td>
+            <td class="td-grade-num">{{ sg.grade_num }}</td>
+        </tr>
+        {% endfor %}
+        {% for i in range(18 - page1_subjects|length) %}
+        <tr><td class="td-name">&nbsp;</td><td class="td-grade-text"></td><td class="td-grade-num"></td></tr>
+        {% endfor %}
+    </table>
+    </div><!-- end page-content -->
+</div>
+
+<!-- PAGE 2 -->
+<div class="page">
+    <div class="page-bg page-2-bg"></div>
+    <div class="page-content values-only">
+    <div style="display:flex; justify-content:space-between; margin-bottom:1mm;">
+        <strong>Наставни предмети/модули</strong>
+        <strong>Успех</strong>
+    </div>
+
+    {% set page2_subjects = cert.subjects_grades[18:22] %}
+    <table class="subjects-table">
+        {% for sg in page2_subjects %}
+        <tr>
+            <td class="td-name">{{ sg.name }}</td>
+            <td class="td-grade-text">{{ sg.grade_text }}</td>
+            <td class="td-grade-num">{{ sg.grade_num }}</td>
+        </tr>
+        {% endfor %}
+        {% for i in range(4 - page2_subjects|length) %}
+        <tr><td class="td-name">&nbsp;</td><td class="td-grade-text"></td><td class="td-grade-num"></td></tr>
+        {% endfor %}
+    </table>
+
+    <div style="margin-top:6mm;" class="line">
+        Поведение <span class="field offset-target" data-field="behavior" style="min-width:80mm;">{{ cert.behavior or '' }}</span>
+    </div>
+    <div class="line">
+        Изостаноци: оправдани <span class="field offset-target" data-field="absences_justified" style="min-width:30mm;">{{ cert.absences_justified or '' }}</span>
+        неоправдани <span class="field offset-target" data-field="absences_unjustified" style="min-width:30mm;">{{ cert.absences_unjustified or '' }}</span>
+    </div>
+
+    <div style="margin-top:8mm;" class="line">
+        Според постигнатиот успех ученикот/ученичката заврши
+        <span class="field offset-target" data-field="completed_year" style="min-width:70mm;">{{ cert.completed_year or '' }}</span> година
+        <div style="font-size:9pt; color:#666;">(со римски број и со букви)</div>
+    </div>
+
+    <div class="line" style="margin-top:2mm;">
+        <span class="field offset-target" data-field="education_type" style="min-width:60mm;">{{ cert.education_type or '' }}</span>
+        <span style="font-size:9pt; color:#666;">(гимназиско/стручно/уметничко)</span>,
+        <span class="field offset-target" data-field="area" style="min-width:80mm;">{{ cert.area or '' }}</span>
+        <span style="font-size:9pt; color:#666;">(подрачје/струка/сектор/насока)</span>,
+    </div>
+    <div class="line">
+        <span class="field offset-target" data-field="profile" style="min-width:90mm;">{{ cert.profile or '' }}</span>
+        <span style="font-size:9pt; color:#666;">(образовен профил/квалификација)</span>
+        со општ успех
+    </div>
+    <div class="line" style="margin-top:1mm;">
+        <span class="field offset-target" data-field="overall_grade" style="min-width:40mm;">{{ cert.overall_grade or '' }}</span>
+    </div>
+
+    <div style="margin-top:6mm;" class="line">
+        Во <span class="field offset-target" data-field="place" style="min-width:40mm;">{{ cert.place or '' }}</span>
+        <span style="font-size:9pt; color:#666;">(место)</span>
+        <span class="field offset-target" data-field="cert_date" style="min-width:30mm;">{{ cert.cert_date or '' }}</span>
+        <span style="font-size:9pt; color:#666;">(датум)</span>
+        20<span class="field" style="min-width:8mm;"></span> година.
+        &nbsp;&nbsp;&nbsp; Дел. бр. <span class="field offset-target" data-field="del_br" style="min-width:35mm;">{{ cert.del_br or '' }}</span>
+    </div>
+
+    <div style="margin-top:16mm; display:flex; justify-content:space-between;">
+        <div style="text-align:center;">
+            <div>Раководител на паралелката</div>
+            <div style="margin-top:8mm; border-top:1px solid #000; width:60mm; margin-left:auto; margin-right:auto;"></div>
+        </div>
+        <div style="text-align:center; margin-top:6mm;">М. П.</div>
+        <div style="text-align:center;">
+            <div>Директор</div>
+            <div style="margin-top:8mm; border-top:1px solid #000; width:50mm; margin-left:auto; margin-right:auto;"></div>
+        </div>
+    </div>
+
+    <div style="margin-top:40mm;" class="line">
+        Училиштето е верифицирано со акт број
+        <span class="field offset-target" data-field="verification_act" style="min-width:60mm;">{{ cert.verification_act or '' }}</span>
+        од <span class="field offset-target" data-field="verification_date" style="min-width:30mm;">{{ cert.verification_date or '' }}</span>
+        <span style="font-size:9pt; color:#666;">(датум)</span> година,
+    </div>
+    <div class="line">
+        издаден од <span class="field offset-target" data-field="verification_issued_by" style="min-width:120mm;">{{ cert.verification_issued_by or '' }}</span>
+    </div>
+    </div><!-- end page-content -->
+</div>
+
+<script>
+const STORAGE_KEY = 'svidetelstva.printPreviewOffsets.v1';
+const FIELD_CONFIG = [
+    { key: 'school_name', label: 'Училиште' },
+    { key: 'municipality', label: 'Општина' },
+    { key: 'main_book_number', label: 'Главна книга бр.' },
+    { key: 'main_book_year', label: 'Година по главна книга' },
+    { key: 'student_name', label: 'Ученик' },
+    { key: 'parent_name', label: 'Родител/старател' },
+    { key: 'birth_date', label: 'Роден/а на' },
+    { key: 'birth_place', label: 'Место на раѓање' },
+    { key: 'birth_municipality', label: 'Општина на раѓање' },
+    { key: 'birth_country', label: 'Држава' },
+    { key: 'citizenship', label: 'Државјанство' },
+    { key: 'completed_year_header', label: 'За завршена година' },
+    { key: 'class_year_body', label: 'Пат учеше во година' },
+    { key: 'completed_year', label: 'Заврши година' },
+    { key: 'school_year_from', label: 'Учебна год. од' },
+    { key: 'school_year_to', label: 'Учебна год. до' },
+    { key: 'attempt_number', label: 'По пат учеше' },
+    { key: 'behavior', label: 'Поведение' },
+    { key: 'overall_grade', label: 'Општ успех' },
+    { key: 'place', label: 'Место' },
+    { key: 'cert_date', label: 'Датум' },
+    { key: 'del_br', label: 'Дел. бр.' },
+    { key: 'verification_act', label: 'Акт број' },
+    { key: 'verification_date', label: 'Датум на акт' },
+    { key: 'verification_issued_by', label: 'Издаден од' }
+];
+
+function mm(v, fallback) {
+    const n = Number(v);
+    return Number.isFinite(n) ? `${n}mm` : `${fallback}mm`;
+}
+
+function num(v, fallback = 0) {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : fallback;
+}
+
+function loadState() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return { global: {}, fields: {} };
+        const parsed = JSON.parse(raw);
+        return {
+            global: parsed && parsed.global ? parsed.global : {},
+            fields: parsed && parsed.fields ? parsed.fields : {}
+        };
+    } catch {
+        return { global: {}, fields: {} };
+    }
+}
+
+function saveState() {
+    const state = {
+        global: {
+            top: num(document.getElementById('ppTop').value, 15),
+            right: num(document.getElementById('ppRight').value, 18),
+            bottom: num(document.getElementById('ppBottom').value, 15),
+            left: num(document.getElementById('ppLeft').value, 18),
+            x: num(document.getElementById('ppX').value, 0),
+            y: num(document.getElementById('ppY').value, 0)
+        },
+        fields: {}
+    };
+
+    FIELD_CONFIG.forEach(({ key }) => {
+        const xEl = document.getElementById(`f-${key}-x`);
+        const yEl = document.getElementById(`f-${key}-y`);
+        if (xEl && yEl) {
+            state.fields[key] = { x: num(xEl.value, 0), y: num(yEl.value, 0) };
+        }
+    });
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function applyFieldOffset(fieldKey, x, y) {
+    document.querySelectorAll(`[data-field="${fieldKey}"]`).forEach((el) => {
+        el.style.setProperty('--fx', `${num(x, 0)}mm`);
+        el.style.setProperty('--fy', `${num(y, 0)}mm`);
+    });
+}
+
+function renderFieldOffsetControls(state) {
+    const grid = document.getElementById('fieldOffsetsGrid');
+    grid.innerHTML = '';
+
+    FIELD_CONFIG.forEach(({ key, label }) => {
+        const row = document.createElement('div');
+        row.className = 'offset-row';
+        let val = state.fields[key] || null;
+        if (!val && key === 'main_book_year') {
+            const source = state.fields.main_book_number || { x: 0, y: 0 };
+            val = { x: num(source.x, 0) + 7, y: num(source.y, 0) };
+        }
+        val = val || { x: 0, y: 0 };
+        row.innerHTML = `
+            <span class="label">${label}</span>
+            <div class="controls">
+                <input id="f-${key}-x" type="number" step="0.1" value="${num(val.x, 0)}" title="X mm" placeholder="X">
+                <input id="f-${key}-y" type="number" step="0.1" value="${num(val.y, 0)}" title="Y mm" placeholder="Y">
+                <button type="button" id="f-${key}-r">Ресет</button>
+            </div>
+        `;
+        grid.appendChild(row);
+
+        const xEl = row.querySelector(`#f-${key}-x`);
+        const yEl = row.querySelector(`#f-${key}-y`);
+        const rEl = row.querySelector(`#f-${key}-r`);
+
+        const apply = () => {
+            applyFieldOffset(key, xEl.value, yEl.value);
+            saveState();
+        };
+
+        xEl.addEventListener('input', apply);
+        yEl.addEventListener('input', apply);
+        rEl.addEventListener('click', () => {
+            xEl.value = 0;
+            yEl.value = 0;
+            apply();
+        });
+
+        applyFieldOffset(key, val.x, val.y);
+    });
+}
+
+function getCurrentStateSnapshot() {
+    const state = {
+        version: 1,
+        generatedAt: new Date().toISOString(),
+        global: {
+            top: num(document.getElementById('ppTop').value, 15),
+            right: num(document.getElementById('ppRight').value, 18),
+            bottom: num(document.getElementById('ppBottom').value, 15),
+            left: num(document.getElementById('ppLeft').value, 18),
+            x: num(document.getElementById('ppX').value, 0),
+            y: num(document.getElementById('ppY').value, 0)
+        },
+        fields: {}
+    };
+    FIELD_CONFIG.forEach(({ key }) => {
+        const xEl = document.getElementById(`f-${key}-x`);
+        const yEl = document.getElementById(`f-${key}-y`);
+        if (xEl && yEl) {
+            state.fields[key] = { x: num(xEl.value, 0), y: num(yEl.value, 0) };
+        }
+    });
+    return state;
+}
+
+function exportOffsetsJson() {
+    const state = getCurrentStateSnapshot();
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `print-offsets-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+}
+
+function importOffsetsJson(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+        try {
+            const parsed = JSON.parse(reader.result);
+            if (!parsed || typeof parsed !== 'object') {
+                throw new Error('Invalid JSON structure');
+            }
+
+            const state = {
+                global: parsed.global || {},
+                fields: parsed.fields || {}
+            };
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            hydrateState();
+            applyCoords();
+            alert('Offsets imported successfully.');
+        } catch (err) {
+            alert('Import failed: invalid JSON file.');
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+}
+
+function applyCoords() {
+    const root = document.documentElement;
+    root.style.setProperty('--pp-pad-top', mm(document.getElementById('ppTop').value, 15));
+    root.style.setProperty('--pp-pad-right', mm(document.getElementById('ppRight').value, 18));
+    root.style.setProperty('--pp-pad-bottom', mm(document.getElementById('ppBottom').value, 15));
+    root.style.setProperty('--pp-pad-left', mm(document.getElementById('ppLeft').value, 18));
+    root.style.setProperty('--pp-offset-x', mm(document.getElementById('ppX').value, 0));
+    root.style.setProperty('--pp-offset-y', mm(document.getElementById('ppY').value, 0));
+    saveState();
+}
+
+function resetCoords() {
+    document.getElementById('ppTop').value = 15;
+    document.getElementById('ppRight').value = 18;
+    document.getElementById('ppBottom').value = 15;
+    document.getElementById('ppLeft').value = 18;
+    document.getElementById('ppX').value = 0;
+    document.getElementById('ppY').value = 0;
+
+    FIELD_CONFIG.forEach(({ key }) => {
+        const xEl = document.getElementById(`f-${key}-x`);
+        const yEl = document.getElementById(`f-${key}-y`);
+        if (xEl && yEl) {
+            xEl.value = 0;
+            yEl.value = 0;
+            applyFieldOffset(key, 0, 0);
+        }
+    });
+
+    applyCoords();
+}
+
+function hydrateState() {
+    const state = loadState();
+    if (state.global) {
+        document.getElementById('ppTop').value = num(state.global.top, num(document.getElementById('ppTop').value, 15));
+        document.getElementById('ppRight').value = num(state.global.right, num(document.getElementById('ppRight').value, 18));
+        document.getElementById('ppBottom').value = num(state.global.bottom, num(document.getElementById('ppBottom').value, 15));
+        document.getElementById('ppLeft').value = num(state.global.left, num(document.getElementById('ppLeft').value, 18));
+        document.getElementById('ppX').value = num(state.global.x, num(document.getElementById('ppX').value, 0));
+        document.getElementById('ppY').value = num(state.global.y, num(document.getElementById('ppY').value, 0));
+    }
+    renderFieldOffsetControls(state);
+}
+
+for (const id of ['ppTop', 'ppRight', 'ppBottom', 'ppLeft', 'ppX', 'ppY']) {
+    document.getElementById(id).addEventListener('input', applyCoords);
+}
+
+hydrateState();
+applyCoords();
+</script>
+
+</body>
+</html>

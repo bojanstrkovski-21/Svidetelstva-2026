@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}Министерства{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">Министерства и акт броеви</h1>
+
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
+    <h2 class="font-semibold mb-4">Додај министерство</h2>
+    <form method="POST" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <input type="hidden" name="action" value="add">
+        <div>
+            <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Акт број</label>
+            <input type="text" name="act_number" required placeholder="пр. 1235468/1999"
+                class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+        </div>
+        <div class="md:col-span-2">
+            <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Назив на министерство (Издаден од)</label>
+            <input type="text" name="name" required placeholder="пр. Министерство за образование и наука на Република Северна Македонија"
+                class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+        </div>
+        <div class="md:col-span-3">
+            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm">Додај</button>
+        </div>
+    </form>
+</div>
+
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 font-semibold">
+        Министерства ({{ ministries|length }})
+    </div>
+    {% if ministries %}
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400">
+                <tr>
+                    <th class="px-4 py-3 text-left font-medium">Назив</th>
+                    <th class="px-4 py-3 text-left font-medium">Акт број</th>
+                    <th class="px-4 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                {% for m in ministries %}
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-750">
+                    <td class="px-4 py-3 font-medium">{{ m.name }}</td>
+                    <td class="px-4 py-3 text-gray-600 dark:text-gray-400">{{ m.act_number or '—' }}</td>
+                    <td class="px-4 py-3 text-right">
+                        <form method="POST" class="inline" onsubmit="return confirm('Избриши го ова министерство?')">
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="ministry_id" value="{{ m.id }}">
+                            <button class="text-sm text-red-500 hover:text-red-700">Избриши</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="px-6 py-10 text-center text-gray-400">Нема додадено министерства.</div>
+    {% endif %}
+</div>
+{% endblock %}
