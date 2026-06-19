@@ -326,12 +326,12 @@
             {% set stručni = [
               'Графички техничар',
               'Графички уредник-дизајнер',
-              'Печатар/изработувач на визуелни апликации',
+              'Печатар',
               'Техничар за патен сообраќај',
               'Техничар за транспорт и шпедиција',
               'Архитектонски техничар',
               'Градежен техничар',
-              'Геолошко – рударски технничар (реформирано образование)',
+              'Геолошко – рударски техничар',
               'Техничар за козметичка нега и убавина',
               'Техничар за дизајн на облека',
               'Техничар за изработка на облека',
@@ -692,7 +692,7 @@ function renumberRows() {
 
 let studentsCache = [];
 
-function loadStudents(classId) {
+function loadStudents(classId, skipFill = false) {
   const list = document.getElementById('studentsList');
   const studentId = document.getElementById('studentId');
   const studentName = document.getElementById('studentName');
@@ -715,18 +715,18 @@ function loadStudents(classId) {
             // Keep existing value on edit pages and re-bind hidden student_id if a match exists.
             if (previousName) {
                 studentName.value = previousName;
-                selectStudentByName(previousName);
+                selectStudentByName(previousName, skipFill);
             }
         });
 }
 
-function selectStudentByName(name) {
+function selectStudentByName(name, skipFill = false) {
   const studentId = document.getElementById('studentId');
   const exact = studentsCache.find(s => `${s.last_name} ${s.first_name}` === name);
 
   if (exact) {
     studentId.value = exact.id || '';
-    fillStudent(studentId.value);
+    if (!skipFill) fillStudent(studentId.value);
     return;
   }
 
@@ -751,7 +751,7 @@ function selectStudentByName(name) {
   if (best && bestScore >= 0.55) {
     studentId.value = best.id || '';
     document.getElementById('studentName').value = `${best.last_name} ${best.first_name}`;
-    fillStudent(studentId.value);
+    if (!skipFill) fillStudent(studentId.value);
     return;
   }
 
@@ -834,7 +834,8 @@ updateOverallGradeFromSubjects();
 
 const initialClassId = document.getElementById('classSelect').value;
 if (initialClassId) {
-  loadStudents(initialClassId);
+  const isEdit = {{ 'true' if cert else 'false' }};
+  loadStudents(initialClassId, isEdit);
 }
 
 initDatePickers();

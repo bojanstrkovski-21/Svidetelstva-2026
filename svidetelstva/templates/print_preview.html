@@ -123,8 +123,8 @@
         }
         .offset-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-            gap: 6px;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 4px;
         }
         .offset-tools {
             display: flex;
@@ -146,43 +146,66 @@
             display: none;
         }
         .offset-row {
-            display: block;
+            display: flex;
+            align-items: center;
+            gap: 4px;
             background: rgba(255, 255, 255, 0.08);
             border: 1px solid #555;
-            border-radius: 6px;
-            padding: 5px;
+            border-radius: 4px;
+            padding: 3px 6px;
         }
         .offset-row .label {
-            font-size: 12px;
-            display: block;
-            margin-bottom: 6px;
+            font-size: 11px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            flex: 1;
+            min-width: 0;
         }
         .offset-row .controls {
-            display: grid;
-            grid-template-columns: 1fr 1fr 52px;
-            gap: 6px;
+            display: flex;
+            gap: 3px;
             align-items: center;
+            flex-shrink: 0;
         }
         .offset-row input {
-            width: 100%;
-            padding: 3px 5px;
+            width: 52px;
+            padding: 2px 4px;
             border: 1px solid #666;
-            border-radius: 4px;
+            border-radius: 3px;
             background: #fff;
             color: #111;
-            font-size: 12px;
+            font-size: 11px;
         }
         .offset-row button {
-            padding: 4px 6px;
+            padding: 2px 5px;
             border: none;
-            border-radius: 4px;
+            border-radius: 3px;
             cursor: pointer;
             background: #4b5563;
             color: #fff;
-            font-size: 11px;
+            font-size: 10px;
+            white-space: nowrap;
+        }
+
+        .offset-tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+        .offset-tab {
+            padding: 5px 12px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            background: #1f2937;
+            color: #d1d5db;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .offset-tab.active {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: #fff;
         }
 
         /* Value-only mode for preview: keep only entered values visible on top of background form. */
@@ -238,7 +261,13 @@
 
     <details class="offset-panel">
         <summary>Field Offsets (X/Y mm)</summary>
+        <div class="offset-tabs">
+            <button type="button" class="offset-tab active" data-tab="before" onclick="switchTab('before')">Пред предмети</button>
+            <button type="button" class="offset-tab" data-tab="subjects" onclick="switchTab('subjects')">Предмети</button>
+            <button type="button" class="offset-tab" data-tab="after" onclick="switchTab('after')">По предмети</button>
+        </div>
         <div class="offset-tools">
+            <button type="button" onclick="saveOffsetsToDb()" id="btnSaveDb" style="background:#16a34a;">Зачувај координати</button>
             <button type="button" onclick="exportOffsetsJson()">Export JSON</button>
             <label>
                 Import JSON
@@ -311,13 +340,17 @@
     <table class="subjects-table">
         {% for sg in page1_subjects %}
         <tr>
-            <td class="td-name">{{ sg.name }}</td>
-            <td class="td-grade-text">{{ sg.grade_text }}</td>
-            <td class="td-grade-num">{{ sg.grade_num }}</td>
+            <td class="td-name offset-target" data-field="subject_p1_{{ loop.index0 }}_name">{{ sg.name }}</td>
+            <td class="td-grade-text offset-target" data-field="subject_p1_{{ loop.index0 }}_grade">{{ sg.grade_text }}</td>
+            <td class="td-grade-num offset-target" data-field="subject_p1_{{ loop.index0 }}_num">{{ sg.grade_num }}</td>
         </tr>
         {% endfor %}
         {% for i in range(18 - page1_subjects|length) %}
-        <tr><td class="td-name">&nbsp;</td><td class="td-grade-text"></td><td class="td-grade-num"></td></tr>
+        <tr>
+            <td class="td-name offset-target" data-field="subject_p1_{{ page1_subjects|length + loop.index0 }}_name">&nbsp;</td>
+            <td class="td-grade-text offset-target" data-field="subject_p1_{{ page1_subjects|length + loop.index0 }}_grade"></td>
+            <td class="td-grade-num offset-target" data-field="subject_p1_{{ page1_subjects|length + loop.index0 }}_num"></td>
+        </tr>
         {% endfor %}
     </table>
     </div><!-- end page-content -->
@@ -336,13 +369,17 @@
     <table class="subjects-table">
         {% for sg in page2_subjects %}
         <tr>
-            <td class="td-name">{{ sg.name }}</td>
-            <td class="td-grade-text">{{ sg.grade_text }}</td>
-            <td class="td-grade-num">{{ sg.grade_num }}</td>
+            <td class="td-name offset-target" data-field="subject_p2_{{ loop.index0 }}_name">{{ sg.name }}</td>
+            <td class="td-grade-text offset-target" data-field="subject_p2_{{ loop.index0 }}_grade">{{ sg.grade_text }}</td>
+            <td class="td-grade-num offset-target" data-field="subject_p2_{{ loop.index0 }}_num">{{ sg.grade_num }}</td>
         </tr>
         {% endfor %}
         {% for i in range(4 - page2_subjects|length) %}
-        <tr><td class="td-name">&nbsp;</td><td class="td-grade-text"></td><td class="td-grade-num"></td></tr>
+        <tr>
+            <td class="td-name offset-target" data-field="subject_p2_{{ page2_subjects|length + loop.index0 }}_name">&nbsp;</td>
+            <td class="td-grade-text offset-target" data-field="subject_p2_{{ page2_subjects|length + loop.index0 }}_grade"></td>
+            <td class="td-grade-num offset-target" data-field="subject_p2_{{ page2_subjects|length + loop.index0 }}_num"></td>
+        </tr>
         {% endfor %}
     </table>
 
@@ -378,9 +415,9 @@
     <div style="margin-top:6mm;" class="line">
         Во <span class="field offset-target" data-field="place" style="min-width:40mm;">{{ cert.place or '' }}</span>
         <span style="font-size:9pt; color:#666;">(место)</span>
-        <span class="field offset-target" data-field="cert_date" style="min-width:30mm;">{{ cert.cert_date or '' }}</span>
+        <span class="field offset-target" data-field="cert_date" style="min-width:20mm;">{{ cert.cert_date_dm or '' }}</span>
         <span style="font-size:9pt; color:#666;">(датум)</span>
-        20<span class="field" style="min-width:8mm;"></span> година.
+        20<span class="field offset-target" data-field="cert_year" style="min-width:8mm;">{{ cert.cert_date_yy or '' }}</span> година.
         &nbsp;&nbsp;&nbsp; Дел. бр. <span class="field offset-target" data-field="del_br" style="min-width:35mm;">{{ cert.del_br or '' }}</span>
     </div>
 
@@ -410,33 +447,64 @@
 
 <script>
 const STORAGE_KEY = 'svidetelstva.printPreviewOffsets.v1';
+const SERVER_OFFSETS = (() => {
+    try { const raw = {{ settings.get('print_offsets_json') | tojson }}; return raw ? JSON.parse(raw) : null; } catch { return null; }
+})();
 const FIELD_CONFIG = [
-    { key: 'school_name', label: 'Училиште' },
-    { key: 'municipality', label: 'Општина' },
-    { key: 'main_book_number', label: 'Главна книга бр.' },
-    { key: 'main_book_year', label: 'Година по главна книга' },
-    { key: 'student_name', label: 'Ученик' },
-    { key: 'parent_name', label: 'Родител/старател' },
-    { key: 'birth_date', label: 'Роден/а на' },
-    { key: 'birth_place', label: 'Место на раѓање' },
-    { key: 'birth_municipality', label: 'Општина на раѓање' },
-    { key: 'birth_country', label: 'Држава' },
-    { key: 'citizenship', label: 'Државјанство' },
-    { key: 'completed_year_header', label: 'За завршена година' },
-    { key: 'class_year_body', label: 'Пат учеше во година' },
-    { key: 'completed_year', label: 'Заврши година' },
-    { key: 'school_year_from', label: 'Учебна год. од' },
-    { key: 'school_year_to', label: 'Учебна год. до' },
-    { key: 'attempt_number', label: 'По пат учеше' },
-    { key: 'behavior', label: 'Поведение' },
-    { key: 'overall_grade', label: 'Општ успех' },
-    { key: 'place', label: 'Место' },
-    { key: 'cert_date', label: 'Датум' },
-    { key: 'del_br', label: 'Дел. бр.' },
-    { key: 'verification_act', label: 'Акт број' },
-    { key: 'verification_date', label: 'Датум на акт' },
-    { key: 'verification_issued_by', label: 'Издаден од' }
+    { key: 'school_name',           label: 'Училиште',                tab: 'before' },
+    { key: 'municipality',          label: 'Општина',                  tab: 'before' },
+    { key: 'main_book_number',      label: 'Главна книга бр.',         tab: 'before' },
+    { key: 'main_book_year',        label: 'Година по главна книга',   tab: 'before' },
+    { key: 'completed_year_header', label: 'За завршена година',       tab: 'before' },
+    { key: 'student_name',          label: 'Ученик',                   tab: 'before' },
+    { key: 'parent_name',           label: 'Родител/старател',         tab: 'before' },
+    { key: 'birth_date',            label: 'Роден/а на',               tab: 'before' },
+    { key: 'birth_place',           label: 'Место на раѓање',          tab: 'before' },
+    { key: 'birth_municipality',    label: 'Општина на раѓање',        tab: 'before' },
+    { key: 'birth_country',         label: 'Држава',                   tab: 'before' },
+    { key: 'citizenship',           label: 'Државјанство',             tab: 'before' },
+    { key: 'school_year_from',      label: 'Учебна год. од',           tab: 'before' },
+    { key: 'school_year_to',        label: 'Учебна год. до',           tab: 'before' },
+    { key: 'attempt_number',        label: 'По пат учеше',             tab: 'before' },
+    { key: 'class_year_body',       label: 'Пат учеше во година',      tab: 'before' },
+    { key: 'behavior',              label: 'Поведение',                tab: 'after' },
+    { key: 'absences_justified',    label: 'Изостаноци оправдани',     tab: 'after' },
+    { key: 'absences_unjustified',  label: 'Изостаноци неоправдани',   tab: 'after' },
+    { key: 'completed_year',        label: 'Заврши година',            tab: 'after' },
+    { key: 'education_type',        label: 'Гимназиско/стручно',       tab: 'after' },
+    { key: 'area',                  label: 'Подрачје/струка',          tab: 'after' },
+    { key: 'profile',               label: 'Образовен профил',         tab: 'after' },
+    { key: 'overall_grade',         label: 'Општ успех',               tab: 'after' },
+    { key: 'place',                 label: 'Место',                    tab: 'after' },
+    { key: 'cert_date',             label: 'Датум (дд.мм)',             tab: 'after' },
+    { key: 'cert_year',             label: 'Датум (20__)',              tab: 'after' },
+    { key: 'del_br',                label: 'Дел. бр.',                 tab: 'after' },
+    { key: 'verification_act',      label: 'Акт број',                 tab: 'after' },
+    { key: 'verification_date',     label: 'Датум на акт',             tab: 'after' },
+    { key: 'verification_issued_by',label: 'Издаден од',               tab: 'after' },
 ];
+
+let activeTab = 'before';
+let masterState = { global: {}, fields: {} };
+
+for (let i = 0; i < 18; i++) {
+    FIELD_CONFIG.push({ key: `subject_p1_${i}_name`,  label: `С1 Ред ${i+1} — Предмет`, tab: 'subjects' });
+    FIELD_CONFIG.push({ key: `subject_p1_${i}_grade`, label: `С1 Ред ${i+1} — Успех`,   tab: 'subjects' });
+    FIELD_CONFIG.push({ key: `subject_p1_${i}_num`,   label: `С1 Ред ${i+1} — Оц.`,     tab: 'subjects' });
+}
+for (let i = 0; i < 4; i++) {
+    FIELD_CONFIG.push({ key: `subject_p2_${i}_name`,  label: `С2 Ред ${i+1} — Предмет`, tab: 'subjects' });
+    FIELD_CONFIG.push({ key: `subject_p2_${i}_grade`, label: `С2 Ред ${i+1} — Успех`,   tab: 'subjects' });
+    FIELD_CONFIG.push({ key: `subject_p2_${i}_num`,   label: `С2 Ред ${i+1} — Оц.`,     tab: 'subjects' });
+}
+
+function switchTab(tab) {
+    activeTab = tab;
+    document.querySelectorAll('.offset-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+    });
+    renderFieldOffsetControls(masterState);
+}
 
 function mm(v, fallback) {
     const n = Number(v);
@@ -449,41 +517,47 @@ function num(v, fallback = 0) {
 }
 
 function loadState() {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return { global: {}, fields: {} };
-        const parsed = JSON.parse(raw);
-        return {
-            global: parsed && parsed.global ? parsed.global : {},
-            fields: parsed && parsed.fields ? parsed.fields : {}
-        };
-    } catch {
-        return { global: {}, fields: {} };
-    }
+    const source = SERVER_OFFSETS || (() => {
+        try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { return null; }
+    })();
+    masterState = {
+        global: (source && source.global) ? source.global : {},
+        fields: (source && source.fields) ? source.fields : {}
+    };
+    return masterState;
+}
+
+function saveOffsetsToDb() {
+    const state = getCurrentStateSnapshot();
+    const btn = document.getElementById('btnSaveDb');
+    btn.disabled = true;
+    btn.textContent = 'Зачувување…';
+    fetch('/api/save-print-offsets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state)
+    })
+    .then(r => r.json())
+    .then(d => {
+        btn.textContent = d.ok ? 'Зачувано ✓' : 'Грешка!';
+        setTimeout(() => { btn.textContent = 'Зачувај координати'; btn.disabled = false; }, 2000);
+    })
+    .catch(() => {
+        btn.textContent = 'Грешка!';
+        setTimeout(() => { btn.textContent = 'Зачувај координати'; btn.disabled = false; }, 2000);
+    });
 }
 
 function saveState() {
-    const state = {
-        global: {
-            top: num(document.getElementById('ppTop').value, 15),
-            right: num(document.getElementById('ppRight').value, 18),
-            bottom: num(document.getElementById('ppBottom').value, 15),
-            left: num(document.getElementById('ppLeft').value, 18),
-            x: num(document.getElementById('ppX').value, 0),
-            y: num(document.getElementById('ppY').value, 0)
-        },
-        fields: {}
+    masterState.global = {
+        top: num(document.getElementById('ppTop').value, 15),
+        right: num(document.getElementById('ppRight').value, 18),
+        bottom: num(document.getElementById('ppBottom').value, 15),
+        left: num(document.getElementById('ppLeft').value, 18),
+        x: num(document.getElementById('ppX').value, 0),
+        y: num(document.getElementById('ppY').value, 0)
     };
-
-    FIELD_CONFIG.forEach(({ key }) => {
-        const xEl = document.getElementById(`f-${key}-x`);
-        const yEl = document.getElementById(`f-${key}-y`);
-        if (xEl && yEl) {
-            state.fields[key] = { x: num(xEl.value, 0), y: num(yEl.value, 0) };
-        }
-    });
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(masterState));
 }
 
 function applyFieldOffset(fieldKey, x, y) {
@@ -497,7 +571,7 @@ function renderFieldOffsetControls(state) {
     const grid = document.getElementById('fieldOffsetsGrid');
     grid.innerHTML = '';
 
-    FIELD_CONFIG.forEach(({ key, label }) => {
+    FIELD_CONFIG.filter(f => f.tab === activeTab).forEach(({ key, label }) => {
         const row = document.createElement('div');
         row.className = 'offset-row';
         let val = state.fields[key] || null;
@@ -507,11 +581,11 @@ function renderFieldOffsetControls(state) {
         }
         val = val || { x: 0, y: 0 };
         row.innerHTML = `
-            <span class="label">${label}</span>
+            <span class="label" title="${label}">${label}</span>
             <div class="controls">
                 <input id="f-${key}-x" type="number" step="0.1" value="${num(val.x, 0)}" title="X mm" placeholder="X">
                 <input id="f-${key}-y" type="number" step="0.1" value="${num(val.y, 0)}" title="Y mm" placeholder="Y">
-                <button type="button" id="f-${key}-r">Ресет</button>
+                <button type="button" id="f-${key}-r">R</button>
             </div>
         `;
         grid.appendChild(row);
@@ -521,6 +595,7 @@ function renderFieldOffsetControls(state) {
         const rEl = row.querySelector(`#f-${key}-r`);
 
         const apply = () => {
+            masterState.fields[key] = { x: num(xEl.value, 0), y: num(yEl.value, 0) };
             applyFieldOffset(key, xEl.value, yEl.value);
             saveState();
         };
@@ -538,27 +613,13 @@ function renderFieldOffsetControls(state) {
 }
 
 function getCurrentStateSnapshot() {
-    const state = {
+    saveState(); // sync global controls into masterState first
+    return {
         version: 1,
         generatedAt: new Date().toISOString(),
-        global: {
-            top: num(document.getElementById('ppTop').value, 15),
-            right: num(document.getElementById('ppRight').value, 18),
-            bottom: num(document.getElementById('ppBottom').value, 15),
-            left: num(document.getElementById('ppLeft').value, 18),
-            x: num(document.getElementById('ppX').value, 0),
-            y: num(document.getElementById('ppY').value, 0)
-        },
-        fields: {}
+        global: { ...masterState.global },
+        fields: { ...masterState.fields }
     };
-    FIELD_CONFIG.forEach(({ key }) => {
-        const xEl = document.getElementById(`f-${key}-x`);
-        const yEl = document.getElementById(`f-${key}-y`);
-        if (xEl && yEl) {
-            state.fields[key] = { x: num(xEl.value, 0), y: num(yEl.value, 0) };
-        }
-    });
-    return state;
 }
 
 function exportOffsetsJson() {
@@ -586,12 +647,12 @@ function importOffsetsJson(event) {
                 throw new Error('Invalid JSON structure');
             }
 
-            const state = {
+            masterState = {
                 global: parsed.global || {},
                 fields: parsed.fields || {}
             };
 
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(masterState));
             hydrateState();
             applyCoords();
             alert('Offsets imported successfully.');
@@ -622,30 +683,34 @@ function resetCoords() {
     document.getElementById('ppX').value = 0;
     document.getElementById('ppY').value = 0;
 
+    masterState.fields = {};
     FIELD_CONFIG.forEach(({ key }) => {
+        applyFieldOffset(key, 0, 0);
         const xEl = document.getElementById(`f-${key}-x`);
         const yEl = document.getElementById(`f-${key}-y`);
-        if (xEl && yEl) {
-            xEl.value = 0;
-            yEl.value = 0;
-            applyFieldOffset(key, 0, 0);
-        }
+        if (xEl && yEl) { xEl.value = 0; yEl.value = 0; }
     });
 
     applyCoords();
 }
 
 function hydrateState() {
-    const state = loadState();
-    if (state.global) {
-        document.getElementById('ppTop').value = num(state.global.top, num(document.getElementById('ppTop').value, 15));
-        document.getElementById('ppRight').value = num(state.global.right, num(document.getElementById('ppRight').value, 18));
-        document.getElementById('ppBottom').value = num(state.global.bottom, num(document.getElementById('ppBottom').value, 15));
-        document.getElementById('ppLeft').value = num(state.global.left, num(document.getElementById('ppLeft').value, 18));
-        document.getElementById('ppX').value = num(state.global.x, num(document.getElementById('ppX').value, 0));
-        document.getElementById('ppY').value = num(state.global.y, num(document.getElementById('ppY').value, 0));
+    loadState(); // populates masterState
+    const g = masterState.global;
+    if (g) {
+        document.getElementById('ppTop').value    = num(g.top,    15);
+        document.getElementById('ppRight').value  = num(g.right,  18);
+        document.getElementById('ppBottom').value = num(g.bottom, 15);
+        document.getElementById('ppLeft').value   = num(g.left,   18);
+        document.getElementById('ppX').value      = num(g.x,       0);
+        document.getElementById('ppY').value      = num(g.y,       0);
     }
-    renderFieldOffsetControls(state);
+    // Apply every field's offset to the page (not just the current tab's).
+    FIELD_CONFIG.forEach(({ key }) => {
+        const val = masterState.fields[key];
+        if (val) applyFieldOffset(key, val.x, val.y);
+    });
+    renderFieldOffsetControls(masterState);
 }
 
 for (const id of ['ppTop', 'ppRight', 'ppBottom', 'ppLeft', 'ppX', 'ppY']) {

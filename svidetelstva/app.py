@@ -121,8 +121,31 @@ def certificate_print(cert_id):
     cert = db.get_certificate(cert_id)
     if not cert:
         abort(404)
+    from datetime import datetime
+    if cert.get('cert_date'):
+        try:
+            d = datetime.strptime(cert['cert_date'], '%Y-%m-%d')
+            cert['cert_date_dm'] = d.strftime('%d.%m.')
+            cert['cert_date_yy'] = d.strftime('%y')
+        except ValueError:
+            cert['cert_date_dm'] = cert['cert_date']
+            cert['cert_date_yy'] = ''
+    else:
+        cert['cert_date_dm'] = ''
+        cert['cert_date_yy'] = ''
     settings = db.get_settings()
     return render_template('print_preview.html', cert=cert, settings=settings)
+
+
+@app.route('/api/save-print-offsets', methods=['POST'])
+@login_required
+def save_print_offsets():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({'ok': False}), 400
+    import json as _json
+    db.save_settings({'print_offsets_json': _json.dumps(data, ensure_ascii=False)})
+    return jsonify({'ok': True})
 
 
 @app.route('/certificate/<int:cert_id>/delete', methods=['POST'])
