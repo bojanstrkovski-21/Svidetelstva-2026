@@ -425,11 +425,13 @@
         <div style="text-align:center;">
             <div>Раководител на паралелката</div>
             <div style="margin-top:8mm; border-top:1px solid #000; width:60mm; margin-left:auto; margin-right:auto;"></div>
+            <div class="field offset-target" data-field="class_teacher" style="min-width:60mm;">{{ cert.class_teacher or '' }}</div>
         </div>
         <div style="text-align:center; margin-top:6mm;">М. П.</div>
         <div style="text-align:center;">
             <div>Директор</div>
             <div style="margin-top:8mm; border-top:1px solid #000; width:50mm; margin-left:auto; margin-right:auto;"></div>
+            <div class="field offset-target" data-field="director" style="min-width:50mm;">{{ cert.director or '' }}</div>
         </div>
     </div>
 
@@ -479,6 +481,8 @@ const FIELD_CONFIG = [
     { key: 'cert_date',             label: 'Датум (дд.мм)',             tab: 'after' },
     { key: 'cert_year',             label: 'Датум (20__)',              tab: 'after' },
     { key: 'del_br',                label: 'Дел. бр.',                 tab: 'after' },
+    { key: 'class_teacher',         label: 'Раководител на паралелката', tab: 'after' },
+    { key: 'director',              label: 'Директор',                 tab: 'after' },
     { key: 'verification_act',      label: 'Акт број',                 tab: 'after' },
     { key: 'verification_date',     label: 'Датум на акт',             tab: 'after' },
     { key: 'verification_issued_by',label: 'Издаден од',               tab: 'after' },

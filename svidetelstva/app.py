@@ -222,6 +222,19 @@ def admin_students_export():
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 
+@app.route('/admin/students/duplicates', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_students_duplicates():
+    if request.method == 'POST':
+        ids = request.form.getlist('delete_ids')
+        if ids:
+            db.delete_students(ids)
+            flash(f'Избришани {len(ids)} ученици.', 'success')
+        return redirect(url_for('admin_students_duplicates'))
+    return render_template('admin/student_duplicates.html', groups=db.get_duplicate_students())
+
+
 @app.route('/admin/students/import', methods=['POST'])
 @login_required
 @admin_required

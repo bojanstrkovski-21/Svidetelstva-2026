@@ -1,8 +1,25 @@
 import os
 import sqlite3
 import json
+import io
+import re
+import unicodedata
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+from openpyxl import Workbook, load_workbook
+
+STUDENT_XLSX_HEADERS = [
+    'Prezime', 'Ime', 'Ime na roditel', 'Paralelka', 'Roden/a na (god.)',
+    'Mesto na raganje', 'Opstina na raganje', 'Drzava', 'Drzavjanstvo'
+]
+
+
+def _normalize_class_name(name):
+    name = unicodedata.normalize('NFKC', str(name)).strip().upper()
+    m = re.match(r'^([IVX]+)[\s_-]*(\d+)$', name)
+    if m:
+        return f'{m.group(1)}-{m.group(2)}'
+    return name
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'svidetelstva.db')
 
@@ -146,7 +163,9 @@ def init_db():
         ('birth_country', 'TEXT'),
         ('citizenship', 'TEXT'),
         ('completed_year_top', 'TEXT'),
-        ('main_book_year', 'TEXT')
+        ('main_book_year', 'TEXT'),
+        ('class_teacher', 'TEXT'),
+        ('director', 'TEXT')
     ]
     for col_name, col_type in missing_columns:
         if col_name not in cert_columns:
@@ -551,9 +570,110 @@ def update_student(student_id, form):
 
 def delete_student(student_id):
     conn = get_db()
+    conn.execute('DELETE FROM certificates WHERE student_id = ?', (student_id,))
     conn.execute('DELETE FROM students WHERE id = ?', (student_id,))
     conn.commit()
     conn.close()
+
+
+def clear_students():
+    conn = get_db()
+    conn.execute('DELETE FROM certificates WHERE student_id IS NOT NULL')
+    conn.execute('DELETE FROM students')
+    conn.commit()
+    conn.close()
+
+
+def get_duplicate_students():
+    students = get_all_students()
+    groups = {}
+    for s in students:
+        key = (s.get('first_name'), s.get('last_name'), s.get('parent_name'),
+               s.get('birth_date'), s.get('birth_place'), s.get('birth_municipality'),
+               s.get('birth_country'), s.get('citizenship'), s.get('class_id'))
+        groups.setdefault(key, []).append(s)
+    return [sorted(g, key=lambda s: s['id']) for g in groups.values() if len(g) > 1]
+
+
+def delete_students(student_ids):
+    if not student_ids:
+        return
+    conn = get_db()
+    conn.executemany('DELETE FROM certificates WHERE student_id = ?', [(sid,) for sid in student_ids])
+    conn.executemany('DELETE FROM students WHERE id = ?', [(sid,) for sid in student_ids])
+    conn.commit()
+    conn.close()
+
+
+def export_students_xlsx():
+    students = get_all_students()
+    wb = Workbook()
+    ws = wb.active
+    ws.append(STUDENT_XLSX_HEADERS)
+    for s in students:
+        ws.append([
+            s.get('last_name'), s.get('first_name'), s.get('parent_name'),
+            s.get('class_name'), s.get('birth_date'), s.get('birth_place'),
+            s.get('birth_municipality'), s.get('birth_country'), s.get('citizenship')
+        ])
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return buf
+
+
+def import_students_xlsx(file_stream):
+    wb = load_workbook(filename=file_stream, data_only=True)
+    ws = wb.active
+    classes = {_normalize_class_name(c['name']): c['id'] for c in get_all_classes()}
+    header_names = {h.strip().lower() for h in STUDENT_XLSX_HEADERS}
+
+    imported = 0
+    skipped = 0
+    unmatched = set()
+
+    conn = get_db()
+    rows = list(ws.iter_rows(min_row=2, values_only=True))
+    for row in rows:
+        row = list(row) + [None] * (9 - len(row))
+        (last_name, first_name, parent_name, class_name, birth_date,
+         birth_place, birth_municipality, birth_country, citizenship) = row[:9]
+
+        if not first_name or not last_name:
+            skipped += 1
+            continue
+
+        if str(first_name).strip().lower() in header_names and str(last_name).strip().lower() in header_names:
+            skipped += 1
+            continue
+
+        class_id = None
+        if class_name:
+            class_name = _normalize_class_name(class_name)
+            class_id = classes.get(class_name)
+            if class_id is None:
+                unmatched.add(class_name)
+
+        conn.execute('''
+            INSERT INTO students
+            (first_name, last_name, parent_name, birth_date, birth_place,
+             birth_municipality, birth_country, citizenship, class_id)
+            VALUES (?,?,?,?,?,?,?,?,?)
+        ''', (
+            str(first_name).strip(), str(last_name).strip(),
+            str(parent_name).strip() if parent_name else None,
+            str(birth_date).strip() if birth_date else None,
+            str(birth_place).strip() if birth_place else None,
+            str(birth_municipality).strip() if birth_municipality else None,
+            str(birth_country).strip() if birth_country else 'Република Северна Македонија',
+            str(citizenship).strip() if citizenship else 'македонско',
+            class_id
+        ))
+        imported += 1
+
+    conn.commit()
+    conn.close()
+    return imported, skipped, sorted(unmatched), None, None
 
 
 # --- Subjects ---
@@ -729,8 +849,9 @@ def save_certificate(form, user_id):
             main_book_number, main_book_year, subjects_grades, behavior, absences_justified, absences_unjustified,
             completed_year, education_type, area, profile, overall_grade,
             place, cert_date, del_br, verification_act, verification_date, verification_issued_by,
+            class_teacher, director,
             status, created_by
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ''', (
         form.get('student_id') or None, form.get('student_name'),
         form.get('class_id') or None, form.get('school_year'),
@@ -743,6 +864,7 @@ def save_certificate(form, user_id):
         form.get('profile'), form.get('overall_grade'),
         form.get('place'), form.get('cert_date'), form.get('del_br'),
         form.get('verification_act'), form.get('verification_date'), form.get('verification_issued_by'),
+        form.get('class_teacher'), form.get('director'),
         form.get('status', 'draft'), user_id
     ))
     cert_id = cur.lastrowid
@@ -761,6 +883,7 @@ def update_certificate(cert_id, form):
             main_book_number=?, main_book_year=?, subjects_grades=?, behavior=?, absences_justified=?, absences_unjustified=?,
             completed_year=?, education_type=?, area=?, profile=?, overall_grade=?,
             place=?, cert_date=?, del_br=?, verification_act=?, verification_date=?, verification_issued_by=?,
+            class_teacher=?, director=?,
             status=?, updated_at=CURRENT_TIMESTAMP
         WHERE id=?
     ''', (
@@ -775,6 +898,7 @@ def update_certificate(cert_id, form):
         form.get('profile'), form.get('overall_grade'),
         form.get('place'), form.get('cert_date'), form.get('del_br'),
         form.get('verification_act'), form.get('verification_date'), form.get('verification_issued_by'),
+        form.get('class_teacher'), form.get('director'),
         form.get('status', 'draft'), cert_id
     ))
     conn.commit()

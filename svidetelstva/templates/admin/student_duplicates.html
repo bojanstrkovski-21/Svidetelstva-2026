@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}Дупликати ученици{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold">Дупликати ученици</h1>
+    <a href="{{ url_for('admin_students') }}" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded text-sm">
+        Назад кон ученици
+    </a>
+</div>
+
+{% if groups %}
+<form method="POST">
+    <div class="space-y-4 mb-6">
+        {% for group in groups %}
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+            <div class="font-semibold mb-2">{{ group[0].last_name }} {{ group[0].first_name }} ({{ group|length }} копии)</div>
+            <table class="w-full text-sm">
+                <thead class="text-gray-500 dark:text-gray-400">
+                    <tr>
+                        <th class="text-left px-2 py-1"></th>
+                        <th class="text-left px-2 py-1">ID</th>
+                        <th class="text-left px-2 py-1">Родител</th>
+                        <th class="text-left px-2 py-1">Роден/а</th>
+                        <th class="text-left px-2 py-1">Паралелка</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in group %}
+                    <tr class="border-t border-gray-100 dark:border-gray-700">
+                        <td class="px-2 py-1">
+                            <input type="checkbox" name="delete_ids" value="{{ s.id }}" {% if not loop.first %}checked{% endif %}>
+                        </td>
+                        <td class="px-2 py-1">{{ s.id }}</td>
+                        <td class="px-2 py-1">{{ s.parent_name or '—' }}</td>
+                        <td class="px-2 py-1">{{ s.birth_date or '—' }}</td>
+                        <td class="px-2 py-1">{{ s.class_name or '—' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+    </div>
+    <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm"
+            onclick="return confirm('Избриши ги селектираните ученици?')">
+        Избриши селектирани
+    </button>
+</form>
+{% else %}
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-10 text-center text-gray-400">
+    Нема пронајдени дупликати.
+</div>
+{% endif %}
+{% endblock %}

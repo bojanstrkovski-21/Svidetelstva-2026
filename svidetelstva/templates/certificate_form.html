@@ -44,6 +44,10 @@
           <option value="{{ cert.student_name }}">
           {% endif %}
         </datalist>
+        <select id="studentSelect" onchange="onStudentSelectChange(this.value)"
+            class="w-full mt-1 px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+          <option value="">— Одбери ученик —</option>
+        </select>
       </div>
     </div>
 
@@ -406,6 +410,25 @@
     </div>
   </div>
 
+  <!-- Signatories -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-4">
+    <h2 class="font-semibold mb-4 text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 pb-2">Потписници</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Раководител на паралелката</label>
+        <input type="text" name="class_teacher" id="classTeacher"
+            value="{{ cert.class_teacher if cert and cert.class_teacher else settings.get('class_teacher', '') }}"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Директор</label>
+        <input type="text" name="director" id="director"
+            value="{{ cert.director if cert and cert.director else settings.get('director', '') }}"
+            class="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+      </div>
+    </div>
+  </div>
+
   <!-- Verification -->
   <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-4">
     <h2 class="font-semibold mb-4 text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 pb-2">Верификација на училиштето</h2>
@@ -701,6 +724,9 @@ function loadStudents(classId, skipFill = false) {
   studentsCache = [];
   studentId.value = '';
 
+  const select = document.getElementById('studentSelect');
+  select.innerHTML = '<option value="">— Одбери ученик —</option>';
+
   if (!classId) return;
     fetch(`/api/students/${classId}`)
         .then(r => r.json())
@@ -710,14 +736,29 @@ function loadStudents(classId, skipFill = false) {
                 const opt = document.createElement('option');
         opt.value = `${s.last_name} ${s.first_name}`;
         list.appendChild(opt);
+
+        const selOpt = document.createElement('option');
+        selOpt.value = s.id;
+        selOpt.textContent = `${s.last_name} ${s.first_name}`;
+        select.appendChild(selOpt);
             });
 
             // Keep existing value on edit pages and re-bind hidden student_id if a match exists.
             if (previousName) {
                 studentName.value = previousName;
                 selectStudentByName(previousName, skipFill);
+                if (studentId.value) select.value = studentId.value;
             }
         });
+}
+
+function onStudentSelectChange(studentId) {
+  if (!studentId) return;
+  const s = studentsCache.find(s => String(s.id) === String(studentId));
+  if (!s) return;
+  document.getElementById('studentName').value = `${s.last_name} ${s.first_name}`;
+  document.getElementById('studentId').value = s.id;
+  fillStudent(s.id);
 }
 
 function selectStudentByName(name, skipFill = false) {
@@ -804,7 +845,7 @@ function fillStudent(studentId) {
           document.getElementById('parentName').value = cleanValue(s.parent_name);
           const bd = cleanValue(s.birth_date);
           if (birthDatePicker && bd) {
-            birthDatePicker.setDate(bd, false);
+            birthDatePicker.setDate(bd, false, 'd.m.Y');
           } else {
             document.getElementById('birthDate').value = bd;
           }
